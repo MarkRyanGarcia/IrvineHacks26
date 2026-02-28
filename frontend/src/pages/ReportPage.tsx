@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect } from "react";
 import ConfidenceGauge from "../components/ConfidenceGauge";
+import ChatWidget from "../components/ChatWidget";
 import { explainResults } from "../api";
 import type { AnalyzeResponse } from "../types";
 
@@ -181,6 +182,8 @@ export default function ReportPage() {
       >
         Start Over
       </button>
+
+      <ChatWidget analysisContext={{ ...result, offer_price: offerPrice }} />
     </div>
   );
 }

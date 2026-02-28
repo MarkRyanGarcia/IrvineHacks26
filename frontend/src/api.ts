@@ -1,4 +1,4 @@
-import type { AnalyzeRequest, AnalyzeResponse, ExplainResponse } from "./types";
+import type { AnalyzeRequest, AnalyzeResponse, ExplainResponse, ChatRequest, ChatResponse } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -26,4 +26,8 @@ export function explainResults(
     ...data,
     prob_underwater: data.prob_underwater ?? data.prob_downside,
   });
+}
+
+export function sendChat(req: ChatRequest): Promise<ChatResponse> {
+  return post<ChatResponse>("/chat", req);
 }

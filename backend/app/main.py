@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import users, analyze
+from app.routers import users, analyze, chat
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,6 +17,7 @@ app.add_middleware(
 
 app.include_router(users.router)
 app.include_router(analyze.router)
+app.include_router(chat.router)
 
 
 @app.get("/health")

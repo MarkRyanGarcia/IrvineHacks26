@@ -18,3 +18,5 @@ ZHVI_CSV_PATH = os.getenv(
 )
 
 MC_NUM_SIMULATIONS = int(os.getenv("MC_NUM_SIMULATIONS", "1000"))
+
+HF_TOKEN = os.getenv("HF_TOKEN", "")

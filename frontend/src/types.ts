@@ -62,3 +62,17 @@ export interface AnalyzeResponse {
 export interface ExplainResponse {
   explanation: string;
 }
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatRequest {
+  messages: ChatMessage[];
+  analysis_context?: Record<string, unknown>;
+}
+
+export interface ChatResponse {
+  reply: string;
+}
