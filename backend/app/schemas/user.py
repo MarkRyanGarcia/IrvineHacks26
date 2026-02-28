@@ -5,13 +5,11 @@ from datetime import datetime
 
 class UserCreate(BaseModel):
     id: str
-    username: str
     email: Optional[EmailStr] = None
 
 
 class UserOut(BaseModel):
     id: str
-    username: str
     email: Optional[EmailStr] = None
     created_at: datetime
 
