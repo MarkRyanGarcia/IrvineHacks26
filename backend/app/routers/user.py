@@ -68,6 +68,8 @@ async def create_user(
     if event_type == "user.created":
         user_data = msg.get("data")
         user_id = user_data.get("id")
+        first_name = user_data.get("first_name")
+        last_name = user_data.get("last_name")
         email = user_data.get("email_addresses")[0].get("email_address")
 
         new_user = User(id=user_id, email=email)
