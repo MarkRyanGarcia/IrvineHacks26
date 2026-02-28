@@ -72,7 +72,7 @@ async def create_user(
         last_name = user_data.get("last_name")
         email = user_data.get("email_addresses")[0].get("email_address")
 
-        new_user = User(id=user_id, email=email)
+        new_user = User(id=user_id, email=email, first_name=first_name, last_name=last_name)
         db.add(new_user)
         db.commit()
         
