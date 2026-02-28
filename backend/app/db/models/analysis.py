@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import DateTime, Float, Integer, String, func, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.models import Base
 
 
@@ -22,3 +22,5 @@ class SavedAnalysis(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now()
     )
+
+    user = relationship("User", back_populates="analyses")

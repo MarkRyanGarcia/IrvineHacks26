@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import users, analyze
+from app.routers import analyze
 from dotenv import load_dotenv
+
+from app.routers import user
 
 load_dotenv()
 
@@ -15,7 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(users.router)
+app.include_router(user.router)
 app.include_router(analyze.router)
 
 
