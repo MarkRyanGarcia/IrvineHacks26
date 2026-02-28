@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import users, analyze, chat
+from app.routers import user, analyze, chat
 from dotenv import load_dotenv
 
 from app.routers import user
