@@ -3,8 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import user, analyze, chat
 from dotenv import load_dotenv
 
-from app.routers import user
-
 load_dotenv()
 
 app = FastAPI(title="HomeConfidence AI", version="0.1.0")

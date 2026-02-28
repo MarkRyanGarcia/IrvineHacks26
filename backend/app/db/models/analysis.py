@@ -4,7 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.models import Base
 
 
-class SavedAnalysis(Base):
+class Analysis(Base):
     __tablename__ = "saved_analyses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
