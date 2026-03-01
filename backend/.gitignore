@@ -30,6 +30,9 @@ Thumbs.db
 .coverage
 htmlcov/
 
+# Large data files (>100MB)
+data/data.csv
+
 # Build artifacts
 build/
 dist/
