@@ -3,7 +3,7 @@ import { fetchBulkAppreciation, fetchSavedProperties, saveProperty, sendChat } f
 import Navbar from "../components/Navbar";
 import { useUser } from "@clerk/clerk-react";
 import { fetchProperties } from "../data/properties";
-import type { PropertyCard, SavedProperty } from "../types";
+import type { PropertyCard, SavedProperty, SavePropertyRequest } from "../types";
 import SwipeCard from "../components/SwipeCard";
 
 const SCOPE_CLASS = "chatting-page-isolated";
@@ -129,7 +129,7 @@ export default function ChattingPage() {
             })
             .catch(console.error)
             .finally(() => setPropertiesLoading(false));
-            console.log(liked);
+        console.log(liked);
     }, []);
 
     // Load Saved Properties
@@ -151,49 +151,63 @@ export default function ChattingPage() {
 
     // Handle Swiping Logic
     const handleSwipe = async (action: "like" | "dislike") => {
-        // 1. Get the top card from the deck
         const top = deck[deck.length - 1];
-        if (!top) return;
+        if (!top || !userId) return;
 
-        // 2. Optimistically update local state
-        if (action === "like") {
-            setLiked(prev => [...prev, top]);
-        }
-        
-        // Remove from deck immediately for UI responsiveness
+        const payload = {
+            // Data from your payload
+            user_id: userId,
+            liked: action === "like",
+            zpid: top.zpid ? parseInt(top.zpid.toString()) : undefined,
+            street_address: top.street_address || undefined,
+            city: top.city || undefined,
+            state: top.state || undefined,
+            zip_code: top.zip_code || undefined,
+            latitude: top.latitude || undefined,
+            longitude: top.longitude || undefined,
+            price: top.price || undefined,
+            price_per_sqft: top.price_per_sqft || undefined,
+            property_type: top.property_type || undefined,
+            beds: top.beds || undefined,
+            baths: top.baths || undefined,
+            sqft: top.sqft || undefined,
+            photo_url: top.image || undefined,
+
+            // MISSING FIELDS: Your backend likely requires these to be explicitly null 
+            // if the DB columns are not set to default values.
+            price_change: undefined,
+            price_changed_date: undefined,
+            listing_status: "active",
+            days_on_zillow: undefined,
+            listing_date: undefined,
+            lot_size: undefined,
+            lot_size_unit: undefined,
+            year_built: undefined,
+            is_new_construction: false,
+            zestimate: undefined,
+            rent_zestimate: undefined,
+            tax_assessed_value: undefined,
+            tax_assessment_year: undefined,
+            has_vr_model: false,
+            has_videos: false,
+            has_floor_plan: false,
+            is_showcase_listing: false,
+            open_house_start: undefined,
+            open_house_end: undefined,
+            broker_name: undefined
+        };
+
+        // Optimistically update UI
         setDeck(prev => prev.slice(0, -1));
 
-        // 3. API Call
-        if (userId) {
-            try {
-                // Ensure we handle potential nulls from the property data
-                const payload = {
-                    user_id: userId,
-                    liked: action === "like",
-                    zpid: top.zpid?.toString() || "", // Ensure string if backend expects it
-                    street_address: top.street_address || "Unknown",
-                    city: top.city || "",
-                    state: top.state || "",
-                    zip_code: top.zip_code || "",
-                    latitude: top.latitude || 0,
-                    longitude: top.longitude || 0,
-                    price: top.price || 0,
-                    price_per_sqft: top.price_per_sqft || 0,
-                    property_type: top.property_type || "",
-                    beds: top.beds || 0,
-                    baths: top.baths || 0,
-                    sqft: top.sqft || 0,
-                    photo_url: top.image || "", // Check if your API expects 'image' or 'photo_url'
-                };
-
-                const savedProp = await saveProperty(payload);
-                setSaved(prev => [...prev, savedProp]);
-            } catch (error) {
-                console.error("Failed to save property:", error);
-                // Optional: Rollback liked state or show a toast notification
-            }
+        try {
+            await saveProperty(payload);
+        } catch (err) {
+            console.error("Save failed. Check if your DB columns allow NULL values.");
         }
     };
+
+
 
     // Chat Logic
     const userMessageCount = messages.filter(m => m.role === "user").length;
