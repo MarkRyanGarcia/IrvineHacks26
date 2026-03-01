@@ -216,11 +216,18 @@ export default function ChattingPage() {
         }
     }, [conversationStarted]);
 
+    // Stop auto-scroll only after the assistant responds to the 3rd user message (6 messages total)
+    const stopAutoScroll = userMessageCount >= 3 && messages.length >= 6;
     useEffect(() => {
-        if (conversationStarted) {
-            bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        if (!conversationStarted || stopAutoScroll) return;
+        if (userMessageCount === 3) {
+            const timer = setTimeout(() => {
+                bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, 5000);
+            return () => clearTimeout(timer);
         }
-    }, [messages, loading]);
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages, loading, conversationStarted, stopAutoScroll, userMessageCount]);
 
     const handleSend = async () => {
         if (!input.trim() || loading) return;
@@ -435,28 +442,41 @@ export default function ChattingPage() {
                         </div>
                     )}
 
-                    {messages.map((msg, i) => (
-                        <div key={i} className={`message ${msg.role}`}>
-                            {msg.content}
-                        </div>
-                    ))}
-
-                    {/* Conditional Rendering of SwipeCard */}
-                    {showSwipeCard && (
-                        <div className="swipe-card-wrapper" style={{ animation: 'fade-in-up 0.8s ease forwards' }}>
-                            <SwipeCardPlaceholder
-                                propertiesLoading={propertiesLoading}
-                                properties={properties}
-                                deck={deck}
-                                setDeck={setDeck}
-                                handleSwipe={handleSwipe}
-                                appreciation={appreciation}
-                                setLiked={setLiked}
-                            />
-                        </div>
+                    {showSwipeCard ? (
+                        <>
+                            {messages.slice(0, 6).map((msg, i) => (
+                                <div key={i} className={`message ${msg.role}`}>
+                                    {msg.content}
+                                </div>
+                            ))}
+                            <div className="swipe-card-wrapper" style={{ animation: 'fade-in-up 0.8s ease forwards' }}>
+                                <SwipeCardPlaceholder
+                                    propertiesLoading={propertiesLoading}
+                                    properties={properties}
+                                    deck={deck}
+                                    setDeck={setDeck}
+                                    handleSwipe={handleSwipe}
+                                    appreciation={appreciation}
+                                    setLiked={setLiked}
+                                />
+                            </div>
+                            {messages.slice(6).map((msg, i) => (
+                                <div key={i + 6} className={`message ${msg.role}`}>
+                                    {msg.content}
+                                </div>
+                            ))}
+                            {loading && <div className="message assistant" style={{ opacity: 0.4 }}>Thinking...</div>}
+                        </>
+                    ) : (
+                        <>
+                            {messages.map((msg, i) => (
+                                <div key={i} className={`message ${msg.role}`}>
+                                    {msg.content}
+                                </div>
+                            ))}
+                            {loading && <div className="message assistant" style={{ opacity: 0.4 }}>Thinking...</div>}
+                        </>
                     )}
-
-                    {loading && <div className="message assistant" style={{ opacity: 0.4 }}>Thinking...</div>}
                     <div ref={bottomRef} />
                 </main>
 
