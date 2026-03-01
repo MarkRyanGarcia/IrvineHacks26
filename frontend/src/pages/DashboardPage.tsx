@@ -566,7 +566,11 @@ export default function DashboardPage() {
   };
 
   const handleRemoveSaved = (id: number) => {
-    deleteSavedProperty(id).then(() => setSaved(prev => prev.filter(p => p.id !== id))).catch(() => { });
+    const removed = saved.find(p => p.id === id);
+    deleteSavedProperty(id).then(() => {
+      setSaved(prev => prev.filter(p => p.id !== id));
+      if (removed?.zpid) setLiked(prev => prev.filter(l => l.zpid !== removed.zpid));
+    }).catch(() => { });
   };
 
   const handleAnswer = (opt: string) => {
@@ -614,11 +618,15 @@ export default function DashboardPage() {
             ))}
           </nav>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {(saved.length > 0 || liked.length > 0) && (
-              <span onClick={() => setTab("saved")} style={{ fontSize: 12, color: "rgba(42,74,66,0.6)", background: "rgba(255,255,255,0.5)", borderRadius: 20, padding: "4px 12px", cursor: "pointer" }}>
-                ♥ {saved.length || liked.length} saved
-              </span>
-            )}
+            {(() => {
+              const savedCount = saved.filter(p => p.liked === true).length;
+              const displayCount = savedCount > 0 ? savedCount : liked.length;
+              return displayCount > 0 && (
+                <span onClick={() => setTab("saved")} style={{ fontSize: 12, color: "rgba(42,74,66,0.6)", background: "rgba(255,255,255,0.5)", borderRadius: 20, padding: "4px 12px", cursor: "pointer" }}>
+                  ♥ {displayCount} saved
+                </span>
+              );
+            })()}
             <UserButton />
           </div>
         </header>
