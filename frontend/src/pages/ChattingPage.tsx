@@ -293,10 +293,12 @@ export default function ChattingPage() {
           position: relative; z-index: 10;
           width: min(900px, 90vw);
           margin: 0 auto;
-          padding: 120px 0 250px; /* Increased bottom padding for input area */
+          padding: 60px 0 280px; /* Top padding; bottom padding clears input area with gap */
           display: flex;
           flex-direction: column;
-          gap: 60px;
+          justify-content: flex-start;
+          align-items: flex-start;
+          gap: 48px;
         }
 
         .${SCOPE_CLASS} .message {
@@ -307,8 +309,8 @@ export default function ChattingPage() {
           animation: fade-in-up 0.5s ease forwards;
         }
         @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; transform: translateY(15px); }
+          to { opacity: 1; transform: translateY(-50px); }
         }
 
         .${SCOPE_CLASS} .assistant { opacity: 0.8; font-style: italic; color: rgba(255,255,255,0.85); }
@@ -348,18 +350,18 @@ export default function ChattingPage() {
         .${SCOPE_CLASS} .input-fixed-wrapper {
           position: fixed;
           bottom: 0; left: 0; width: 100%;
-          padding: 40px 0 40px 8vw;
-          background: linear-gradient(transparent, #FF6200 40%);
+          padding: 120px 0;
+          background: linear-gradient(transparent, rgba(255,98,0,0.7) 40%);
           z-index: 20;
           display: flex;
-          justify-content: flex-start;
+          justify-content: center;
           opacity: 0;
           pointer-events: none;
           animation: reveal-after-sun 0.35s ease 2.1s forwards;
         }
 
         .${SCOPE_CLASS} .input-box {
-          width: min(800px, 84vw);
+          width: min(900px, 90vw);
           display: flex;
           align-items: flex-start;
           position: relative;
@@ -367,14 +369,14 @@ export default function ChattingPage() {
 
         .${SCOPE_CLASS} .input-textarea {
           width: 100%; background: transparent; border: none; outline: none;
-          resize: none; font-family: 'Jost', sans-serif; font-size: 1.2rem;
-          color: white; padding: 10px 0; caret-color: white;
+          resize: none; font-family: 'Jost', sans-serif; font-size: 2.2rem;
+          color: white; padding: 14px 0; caret-color: white;
         }
 
         .${SCOPE_CLASS} .cursor-line {
-          display: inline-block; width: 2px; height: 1.4rem;
+          display: inline-block; width: 3px; height: 1.8rem;
           background: #fff; animation: blink 1.05s step-start infinite;
-          position: absolute; left: 0; top: 12px; pointer-events: none;
+          position: absolute; left: 0; top: 14px; pointer-events: none;
         }
 
         /* ── Landing-only input (big, positioned below headline) ── */
