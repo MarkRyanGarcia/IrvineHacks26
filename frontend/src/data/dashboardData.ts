@@ -11,22 +11,48 @@ export function fmtPrice(n: number) {
   return n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : `$${(n / 1_000).toLocaleString()}k`;
 }
 
+export interface FitProfile {
+  targetPrice: number;
+  targetBeds: number;
+  targetSqft: number;
+}
+
+export function buildFitProfile(liked: PropertyCard[]): FitProfile {
+  if (liked.length === 0) {
+    return { targetPrice: 800_000, targetBeds: 3, targetSqft: 2000 };
+  }
+  const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+  return {
+    targetPrice: avg(liked.map(p => p.price ?? 800_000)),
+    targetBeds: avg(liked.map(p => p.beds ?? 3)),
+    targetSqft: avg(liked.map(p => p.sqft ?? 2000)),
+  };
+}
+
+export function computeFitScore(p: PropertyCard, profile: FitProfile): number {
+  const { targetPrice, targetBeds, targetSqft } = profile;
+  const priceSim = 1 - Math.min(1, Math.abs((p.price ?? targetPrice) - targetPrice) / targetPrice);
+  const bedSim = 1 - Math.min(1, Math.abs((p.beds ?? targetBeds) - targetBeds) / 4);
+  const sqftSim = 1 - Math.min(1, Math.abs((p.sqft ?? targetSqft) - targetSqft) / targetSqft);
+  const score = 0.5 * priceSim + 0.25 * bedSim + 0.25 * sqftSim;
+  return Math.round(Math.min(98, Math.max(35, score * 100)));
+}
+
+/** Legacy single-arg score kept for any callers outside the dashboard */
 export function matchScore(p: PropertyCard) {
-  const priceW = Math.max(0, 1 - (p.price ?? 0) / 2_000_000) * 50;
-  const sizeW = Math.min((p.sqft ?? 0) / 3000, 1) * 50;
-  return Math.round(Math.min(98, Math.max(55, priceW + sizeW + 20)));
+  return computeFitScore(p, buildFitProfile([]));
 }
 
 export function tags(p: PropertyCard) {
   const t: { label: string; color: string }[] = [];
-  if (p.is_new_construction) t.push({ label: "New Construction", color: "#6db8a0" });
-  if ((p.days_on_zillow ?? 99) <= 7) t.push({ label: "Just Listed", color: "#6db8a0" });
-  if ((p.price_change ?? 0) < 0) t.push({ label: "Price Cut", color: "#c4a882" });
-  if ((p.price ?? 0) < 600000) t.push({ label: "Under Budget", color: "#6db8a0" });
-  if ((p.price ?? 0) > 1000000) t.push({ label: "Premium", color: "#c4a882" });
-  if (p.property_type === "condo") t.push({ label: "Condo", color: "#9eb8d4" });
-  if ((p.sqft ?? 0) >= 2000) t.push({ label: "Spacious", color: "#7ab3c8" });
-  if (p.is_showcase_listing) t.push({ label: "Showcase", color: "#7ab3c8" });
+  if (p.is_new_construction) t.push({ label: "New Construction", color: "rgba(255,255,255,0.95)" });
+  if ((p.days_on_zillow ?? 99) <= 7) t.push({ label: "Just Listed", color: "rgba(255,255,255,0.95)" });
+  if ((p.price_change ?? 0) < 0) t.push({ label: "Price Cut", color: "#FFD4A3" });
+  if ((p.price ?? 0) < 600000) t.push({ label: "Under Budget", color: "rgba(255,255,255,0.95)" });
+  if ((p.price ?? 0) > 1000000) t.push({ label: "Premium", color: "#FFD4A3" });
+  if (p.property_type === "condo") t.push({ label: "Condo", color: "rgba(255,230,190,0.9)" });
+  if ((p.sqft ?? 0) >= 2000) t.push({ label: "Spacious", color: "rgba(255,230,190,0.9)" });
+  if (p.is_showcase_listing) t.push({ label: "Showcase", color: "rgba(255,230,190,0.9)" });
   return t.slice(0, 3);
 }
 

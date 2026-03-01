@@ -5,22 +5,10 @@ import { fetchProperties } from "../data/properties";
 import type { PropertyCard, SavedProperty, ChatMessage } from "../types";
 import { sendChat, saveProperty, fetchSavedProperties, deleteSavedProperty, fetchBulkAppreciation } from "../api";
 import SwipeCard from "../components/SwipeCard";
-import { SURVEY, fmtPrice, filterByBedrooms, filterByBudget } from "../data/dashboardData";
+import { SURVEY, fmtPrice, filterByBedrooms, filterByBudget, buildFitProfile, computeFitScore } from "../data/dashboardData";
+import type { FitProfile } from "../data/dashboardData";
 
-/* ── MatchArc ── */
-export function MatchArc({ pct }: { pct: number }) {
-  const r = 16, stroke = 3, circ = 2 * Math.PI * r;
-  const color = pct >= 88 ? "#6db8a0" : pct >= 78 ? "#7ab3c8" : "#c4a882";
-  return (
-    <svg width={38} height={38} viewBox="0 0 38 38">
-      <circle cx={19} cy={19} r={r} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={stroke} />
-      <circle cx={19} cy={19} r={r} fill="none" stroke={color} strokeWidth={stroke}
-        strokeDasharray={`${circ * pct / 100} ${circ}`} strokeLinecap="round"
-        style={{ transform: "rotate(-90deg)", transformOrigin: "19px 19px" }} />
-      <text x={19} y={23} textAnchor="middle" fill="white" fontSize={9} fontWeight={700} fontFamily="'DM Sans',sans-serif">{pct}%</text>
-    </svg>
-  );
-}
+export { MatchArc } from "../components/MatchArc";
 
 /* ── Wave canvas ── */
 export function useWaveCanvas(paused: boolean) {
@@ -307,6 +295,8 @@ export default function DashboardPage() {
   const [fadeIn, setFadeIn] = useState(true);
   const [tab, setTab] = useState<"explore" | "saved">("explore");
   const [appreciation, setAppreciation] = useState<Record<string, number | null>>({});
+  // Stable fit profile — computed once from initial likes (empty → defaults); never re-sorted mid-session.
+  const [fitProfile] = useState<FitProfile>(() => buildFitProfile([]));
   const canvasRef = useWaveCanvas(tab === "explore");
   const surveyDone = surveyStep >= SURVEY.length;
 
@@ -324,8 +314,9 @@ export default function DashboardPage() {
     if (properties.length === 0) return;
     let filtered = filterByBedrooms(properties, bedroomPref);
     filtered = filterByBudget(filtered, budgetPref);
-    setDeck([...filtered].reverse());
-  }, [bedroomPref, budgetPref, properties]);
+    // Sort ascending by fit score so the highest-fit card sits at deck[deck.length-1] (top of stack).
+    setDeck([...filtered].sort((a, b) => computeFitScore(a, fitProfile) - computeFitScore(b, fitProfile)));
+  }, [bedroomPref, budgetPref, properties, fitProfile]);
 
   useEffect(() => {
     if (userId) fetchSavedProperties(userId).then(setSaved).catch(() => { });
@@ -466,7 +457,7 @@ export default function DashboardPage() {
             {/* Left — swipe */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", letterSpacing: 1.6, textTransform: "uppercase", fontWeight: 600 }}>Best Matches · {deck.length} remaining</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", letterSpacing: 1.6, textTransform: "uppercase", fontWeight: 600 }}>BEST MATCHES · {deck.length} REMAINING</p>
                 <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>drag or tap ✕ / ♥</p>
               </div>
               <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
@@ -508,6 +499,7 @@ export default function DashboardPage() {
                         isTop={stackIndex === 0}
                         stackIndex={stackIndex}
                         appreciationPct={appreciation[listing.zip_code ?? ""] ?? null}
+                        fitScore={computeFitScore(listing, fitProfile)}
                       />
                     );
                   })
