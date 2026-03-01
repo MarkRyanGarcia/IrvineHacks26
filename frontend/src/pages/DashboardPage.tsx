@@ -487,11 +487,9 @@ export default function DashboardPage() {
   const surveyDone = surveyStep >= SURVEY.length;
 
   const handleSwipe = (action: "like" | "dislike") => {
-    setDeck(d => {
-      const top = d[d.length - 1];
-      if (action === "like" && top) setLiked(l => [...l, top]);
-      return d.slice(0, -1);
-    });
+    const top = deck[deck.length - 1];
+    if (action === "like" && top) setLiked(l => [...l, top]);
+    setDeck(d => d.slice(0, -1));
   };
 
   const handleAnswer = (opt: string) => {
