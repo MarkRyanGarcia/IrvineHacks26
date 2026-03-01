@@ -10,7 +10,7 @@ class Properties(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
-    zpid: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, unique=True)
+    zpid: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, unique=False)
     liked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Address
