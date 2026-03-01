@@ -3,7 +3,7 @@ import { fetchBulkAppreciation, fetchSavedProperties, saveProperty, sendChat } f
 import Navbar from "../components/Navbar";
 import { useUser } from "@clerk/clerk-react";
 import { fetchProperties } from "../data/properties";
-import type { PropertyCard, SavedProperty, SavePropertyRequest } from "../types";
+import type { PropertyCard, SavedProperty } from "../types";
 import SwipeCard from "../components/SwipeCard";
 
 const SCOPE_CLASS = "chatting-page-isolated";
