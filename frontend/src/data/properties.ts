@@ -1,19 +1,73 @@
 import type { PropertyCard } from "../types";
 
-const IMAGES = [
-  "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80",
-  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=80",
-  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80",
-  "https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=600&q=80",
-  "https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=600&q=80",
-  "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&q=80",
-  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80",
-  "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=600&q=80",
-  "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600&q=80",
-  "https://images.unsplash.com/photo-1602343168117-bb8bbe693da0?w=600&q=80",
-];
+/*
+  Load images by bedroom category
+*/
 
-export const MOCK_PROPERTIES: PropertyCard[] = [
+const oneBedModules = import.meta.glob(
+  "../assets/HouseImages/1BedImages/*.{jpg,png,jpeg,webp}",
+  { eager: true }
+);
+
+const twoBedModules = import.meta.glob(
+  "../assets/HouseImages/2BedImages/*.{jpg,png,jpeg,webp}",
+  { eager: true }
+);
+
+const threeBedModules = import.meta.glob(
+  "../assets/HouseImages/3BedImages/*.{jpg,png,jpeg,webp}",
+  { eager: true }
+);
+
+const fourBedModules = import.meta.glob(
+  "../assets/HouseImages/4BedImages/*.{jpg,png,jpeg,webp}",
+  { eager: true }
+);
+
+/*
+  Convert modules to arrays
+*/
+
+const ONE_BED_IMAGES = Object.values(oneBedModules).map(
+  (mod: any) => mod.default
+);
+
+const TWO_BED_IMAGES = Object.values(twoBedModules).map(
+  (mod: any) => mod.default
+);
+
+const THREE_BED_IMAGES = Object.values(threeBedModules).map(
+  (mod: any) => mod.default
+);
+
+const FOUR_BED_IMAGES = Object.values(fourBedModules).map(
+  (mod: any) => mod.default
+);
+
+/*
+  Helper function to get image based on bed count
+*/
+
+function getImageByBeds(beds: number, index: number) {
+  switch (beds) {
+    case 1:
+      return ONE_BED_IMAGES[index % ONE_BED_IMAGES.length];
+    case 2:
+      return TWO_BED_IMAGES[index % TWO_BED_IMAGES.length];
+    case 3:
+      return THREE_BED_IMAGES[index % THREE_BED_IMAGES.length];
+    case 4:
+      return FOUR_BED_IMAGES[index % FOUR_BED_IMAGES.length];
+    default:
+      return THREE_BED_IMAGES[0]; // fallback
+  }
+}
+
+/*
+  Mock properties
+*/
+
+const rawProperties: Omit<PropertyCard, "image">[] = [
   {
     id: 1,
     address: "142 Willow Creek Dr",
@@ -26,7 +80,6 @@ export const MOCK_PROPERTIES: PropertyCard[] = [
     property_type: "Townhouse",
     school_score: 9,
     commute_minutes: 22,
-    image: IMAGES[0],
   },
   {
     id: 2,
@@ -40,7 +93,6 @@ export const MOCK_PROPERTIES: PropertyCard[] = [
     property_type: "Single Family",
     school_score: 10,
     commute_minutes: 15,
-    image: IMAGES[1],
   },
   {
     id: 3,
@@ -54,7 +106,6 @@ export const MOCK_PROPERTIES: PropertyCard[] = [
     property_type: "Condo",
     school_score: 7,
     commute_minutes: 10,
-    image: IMAGES[2],
   },
   {
     id: 4,
@@ -68,90 +119,81 @@ export const MOCK_PROPERTIES: PropertyCard[] = [
     property_type: "Single Family",
     school_score: 8,
     commute_minutes: 30,
-    image: IMAGES[3],
   },
   {
-    id: 5,
-    address: "77 Sunset Blvd",
-    city: "Los Angeles",
-    zip: "90024",
-    price: 1480000,
-    sqft: 2200,
-    beds: 3,
-    baths: 3,
-    property_type: "Single Family",
-    school_score: 8,
-    commute_minutes: 35,
-    image: IMAGES[4],
+  id: 5,
+  address: "210 Lakeview Terrace",
+  city: "Seattle",
+  zip: "98109",
+  price: 865000,
+  sqft: 1750,
+  beds: 3,
+  baths: 2,
+  property_type: "Single Family",
+  school_score: 8,
+  commute_minutes: 18,
   },
   {
-    id: 6,
-    address: "209 Pine St",
-    city: "Seattle",
-    zip: "98101",
-    price: 710000,
-    sqft: 1400,
-    beds: 2,
-    baths: 2,
-    property_type: "Condo",
-    school_score: 7,
-    commute_minutes: 12,
-    image: IMAGES[5],
+  id: 6,
+  address: "14 Ocean Crest Way",
+  city: "San Diego",
+  zip: "92130",
+  price: 1425000,
+  sqft: 2950,
+  beds: 4,
+  baths: 3,
+  property_type: "Single Family",
+  school_score: 9,
+  commute_minutes: 25,
   },
   {
-    id: 7,
-    address: "1414 Peachtree Rd",
-    city: "Atlanta",
-    zip: "30309",
-    price: 495000,
-    sqft: 2100,
-    beds: 4,
-    baths: 2,
-    property_type: "Single Family",
-    school_score: 6,
-    commute_minutes: 25,
-    image: IMAGES[6],
+  id: 7,
+  address: "77 Midtown Plaza",
+  city: "Atlanta",
+  zip: "30308",
+  price: 420000,
+  sqft: 950,
+  beds: 1,
+  baths: 1,
+  property_type: "Condo",
+  school_score: 7,
+  commute_minutes: 12,
   },
   {
-    id: 8,
-    address: "62 Beacon Hill",
-    city: "Boston",
-    zip: "02101",
-    price: 680000,
-    sqft: 1100,
-    beds: 2,
-    baths: 1,
-    property_type: "Condo",
-    school_score: 9,
-    commute_minutes: 8,
-    image: IMAGES[7],
+  id: 8,
+  address: "509 Desert Bloom Ave",
+  city: "Phoenix",
+  zip: "85016",
+  price: 375000,
+  sqft: 1600,
+  beds: 2,
+  baths: 2,
+  property_type: "Townhouse",
+  school_score: 6,
+  commute_minutes: 22,
   },
   {
-    id: 9,
-    address: "900 Desert Palm Dr",
-    city: "Phoenix",
-    zip: "85281",
-    price: 365000,
-    sqft: 1900,
-    beds: 3,
-    baths: 2,
-    property_type: "Single Family",
-    school_score: 6,
-    commute_minutes: 28,
-    image: IMAGES[8],
-  },
-  {
-    id: 10,
-    address: "455 Ocean Drive",
-    city: "Miami Beach",
-    zip: "33139",
-    price: 590000,
-    sqft: 1300,
-    beds: 2,
-    baths: 2,
-    property_type: "Condo",
-    school_score: 7,
-    commute_minutes: 18,
-    image: IMAGES[9],
+  id: 9,
+  address: "321 Harbor Lights Dr",
+  city: "Miami",
+  zip: "33132",
+  price: 610000,
+  sqft: 1350,
+  beds: 2,
+  baths: 2,
+  property_type: "Condo",
+  school_score: 7,
+  commute_minutes: 15,
   },
 ];
+
+/*
+  Attach correct images dynamically
+*/
+
+export const MOCK_PROPERTIES: PropertyCard[] = rawProperties.map(
+  (property, index) => ({
+    ...property,
+    image: getImageByBeds(property.beds, index),
+  })
+);
