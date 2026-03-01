@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from "react";
 import type { PropertyCard } from "../types";
-import { fmtPrice, MatchArc, matchScore, tags } from "../pages/DashboardPage";
+import { fmtPrice, matchScore, tags } from "../data/dashboardData";
+import { MatchArc } from "../pages/DashboardPage";
 
 /* ── SwipeCard ── */
 export interface SwipeCardProps { listing: PropertyCard; onSwipe: (action: "like" | "dislike") => void; isTop: boolean; stackIndex: number; appreciationPct?: number | null; }
