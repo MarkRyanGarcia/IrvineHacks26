@@ -442,7 +442,6 @@ export default function DashboardPage() {
                 <p style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", letterSpacing: 1.6, textTransform: "uppercase", fontWeight: 600 }}>
                   RECOMMENDATIONS · {recoList.length} HOMES
                 </p>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>sorted by AI fit</p>
               </div>
 
               {/* Split: list (left) + preview (right) */}
