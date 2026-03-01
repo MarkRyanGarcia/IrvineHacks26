@@ -4,7 +4,7 @@ import { UserButton, useUser } from "@clerk/clerk-react";
 import { fetchProperties } from "../data/properties";
 import type { PropertyCard, SavedProperty, ChatMessage } from "../types";
 import { sendChat, saveProperty, fetchSavedProperties, deleteSavedProperty, fetchBulkAppreciation } from "../api";
-import { SURVEY, fmtPrice, buildFitProfile, computeFitScore } from "../data/dashboardData";
+import { fmtPrice, buildFitProfile, computeFitScore } from "../data/dashboardData";
 import type { FitProfile } from "../data/dashboardData";
 
 export { MatchArc } from "../components/MatchArc";
@@ -331,16 +331,12 @@ export default function DashboardPage() {
   const [propertiesLoading, setPropertiesLoading] = useState(true);
   const [liked, setLiked] = useState<PropertyCard[]>([]);
   const [saved, setSaved] = useState<SavedProperty[]>([]);
-  const [surveyStep, setSurveyStep] = useState(0);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [fadeIn, setFadeIn] = useState(true);
   const [tab, setTab] = useState<"recommendations" | "saved">("recommendations");
   const [appreciation, setAppreciation] = useState<Record<string, number | null>>({});
   // Stable fit profile — computed once from initial likes (empty → defaults); never re-sorted mid-session.
   const [fitProfile] = useState<FitProfile>(() => buildFitProfile([]));
   const [selectedListing, setSelectedListing] = useState<PropertyCard | null>(null);
   const canvasRef = useWaveCanvas(tab === "recommendations");
-  const surveyDone = surveyStep >= SURVEY.length;
 
   useEffect(() => {
     fetchProperties()
@@ -385,14 +381,6 @@ export default function DashboardPage() {
     }).catch(() => { });
   };
 
-  const handleAnswer = (opt: string) => {
-    setSelected(opt);
-    setTimeout(() => {
-      setFadeIn(false);
-      setTimeout(() => { setSurveyStep(s => s + 1); setSelected(null); setFadeIn(true); }, 200);
-    }, 340);
-  };
-
   return (
     <div style={{ height: "100vh", overflow: "hidden", fontFamily: "'Jost', sans-serif", color: "#fff", display: "flex", flexDirection: "column" }}>
       <style>{`
@@ -419,7 +407,7 @@ export default function DashboardPage() {
 
         {/* Header */}
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 48px", flexShrink: 0 }}>
-          <span style={{ fontFamily: "'Fraunces', serif", fontSize: 24, letterSpacing: 0.5, color: "#fff" }}>realease</span>
+          <span onClick={() => navigate("/")} style={{ fontFamily: "'Fraunces', serif", fontSize: 24, letterSpacing: 0.5, color: "#fff", cursor: "pointer" }}>realease</span>
           <nav style={{ display: "flex", gap: 36 }}>
             {(["recommendations", "saved"] as const).map((n) => (
               <span key={n} onClick={() => setTab(n)} style={{
@@ -569,38 +557,8 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Right — widgets (unchanged) */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
-              <div style={{
-                background: "rgba(255,255,255,0.12)", backdropFilter: "blur(16px)",
-                borderRadius: 18, padding: "20px 18px",
-                border: "1px solid rgba(255,255,255,0.18)",
-                boxShadow: "0 3px 16px rgba(0,0,0,0.1)", flexShrink: 0,
-              }}>
-                <div className={fadeIn ? "fade-up" : "fade-out"} key={surveyStep}>
-                  {!surveyDone ? (
-                    <>
-                      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 1.4, textTransform: "uppercase", fontWeight: 600, marginBottom: 10 }}>{surveyStep + 1} of {SURVEY.length}</p>
-                      <p style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 15, fontWeight: 400, lineHeight: 1.5, marginBottom: 14, color: "#fff" }}>{SURVEY[surveyStep].q}</p>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {SURVEY[surveyStep].options.map(opt => (
-                          <button key={opt} className="opt-btn" onClick={() => handleAnswer(opt)} style={{
-                            padding: "6px 13px", borderRadius: 20, fontFamily: "inherit",
-                            background: selected === opt ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)",
-                            color: "#fff", fontSize: 12, fontWeight: selected === opt ? 600 : 400,
-                            border: selected === opt ? "1.5px solid rgba(255,255,255,0.5)" : "1.5px solid rgba(255,255,255,0.25)",
-                          }}>{opt}</button>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ textAlign: "center", padding: "8px 0" }}>
-                      <div style={{ fontSize: 20, marginBottom: 8, color: "rgba(255,255,255,0.8)" }}>✓</div>
-                      <p style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 15, color: "#fff", lineHeight: 1.45 }}>All set — refining your matches.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {/* Right — chatbot only */}
+            <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
               <InlineChat userId={userId} />
             </div>
           </div>
