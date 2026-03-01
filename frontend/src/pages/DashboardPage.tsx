@@ -37,11 +37,11 @@ export function useWaveCanvas(paused: boolean) {
     const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
     window.addEventListener("resize", resize);
     const waves = [
-      { amp: 28, freq: 0.007, speed: 0.003, y: 0.30, color: "rgba(130,195,185,0.13)" },
-      { amp: 20, freq: 0.010, speed: 0.002, y: 0.46, color: "rgba(105,180,200,0.10)" },
-      { amp: 16, freq: 0.013, speed: 0.004, y: 0.60, color: "rgba(148,205,182,0.09)" },
-      { amp: 24, freq: 0.006, speed: 0.0015, y: 0.73, color: "rgba(90,172,198,0.08)" },
-      { amp: 12, freq: 0.017, speed: 0.005, y: 0.86, color: "rgba(128,202,187,0.07)" },
+      { amp: 28, freq: 0.007, speed: 0.001, y: 0.30, color: "rgba(130,195,185,0.13)" },
+      { amp: 20, freq: 0.010, speed: 0.0007, y: 0.46, color: "rgba(105,180,200,0.10)" },
+      { amp: 16, freq: 0.013, speed: 0.0012, y: 0.60, color: "rgba(148,205,182,0.09)" },
+      { amp: 24, freq: 0.006, speed: 0.0005, y: 0.73, color: "rgba(90,172,198,0.08)" },
+      { amp: 12, freq: 0.017, speed: 0.0015, y: 0.86, color: "rgba(128,202,187,0.07)" },
     ];
     let t = 0, raf: number;
     const draw = () => {
