@@ -224,7 +224,7 @@ function SwipeCard({ listing, onSwipe, isTop, stackIndex }: SwipeCardProps) {
         </div>
 
         {isTop && (
-          <div style={{ display: "flex", justifyContent: "center", gap: 22, padding: "9px 0", background: "rgba(240,248,245,0.55)", flexShrink: 0 }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: 22, padding: "9px 0", background: "rgb(240,248,244)", flexShrink: 0 }}>
             <button onClick={() => trigger("left")} style={{
               width: 38, height: 38, borderRadius: "50%", border: "none",
               background: "rgba(196,168,130,0.15)", cursor: "pointer", fontSize: 16,
@@ -419,12 +419,12 @@ function InlineChat() {
         boxShadow: "0 6px 28px rgba(42,74,66,0.13)", minHeight: 0, overflow: "hidden",
       }}>
         <div style={{ padding: "20px 18px 0", flex: 1, display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 20, marginBottom: 10 }}>🧠</div>
+          <div style={{ fontSize: 20, marginBottom: 10 }}>🔎</div>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 400, color: "rgba(220,240,235,0.95)", lineHeight: 1.25, marginBottom: 8 }}>
             How can<br />I help?
           </div>
           <p style={{ fontSize: 12, color: "rgba(200,230,222,0.45)", lineHeight: 1.6, marginBottom: "auto" }}>
-            Ask anything about a home, the process, or finances.
+            Tell me what you need clarity on…”
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 5, margin: "12px 0 10px" }}>
             {["Good buy?", "What's next?", "Explain risks"].map(p => (
@@ -494,12 +494,11 @@ export default function DashboardPage() {
 
   const handleSwipe = (action: "like" | "dislike") => {
     const top = deck[deck.length - 1];
-    if (top) {
+    if (action === "like" && top) {
       setLiked(l => [...l, top]);
       if (userId) {
         saveProperty({
           user_id: userId,
-          liked: action === "like",
           address: top.address,
           city: top.city,
           price: top.price,
