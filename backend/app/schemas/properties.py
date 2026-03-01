@@ -5,6 +5,7 @@ from datetime import datetime
 
 class PropertiesCreate(BaseModel):
     user_id: str
+    liked: bool
     address: str
     city: str
     price: float
@@ -20,6 +21,7 @@ class PropertiesCreate(BaseModel):
 class PropertiesOut(BaseModel):
     id: int
     user_id: str
+    liked: bool
     address: str
     city: str
     price: float

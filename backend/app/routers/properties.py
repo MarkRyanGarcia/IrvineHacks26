@@ -23,6 +23,7 @@ def create_properties(
 ):
     new_property = Properties(
         user_id=req.user_id,
+        liked=req.liked,
         address=req.address,
         city=req.city,
         price=req.price,

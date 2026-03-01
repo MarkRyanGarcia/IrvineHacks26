@@ -80,6 +80,7 @@ export interface ChatResponse {
 export interface SavedProperty {
   id: number;
   user_id: string;
+  liked: boolean;
   address: string;
   city: string;
   price: number;
@@ -95,6 +96,7 @@ export interface SavedProperty {
 
 export interface SavePropertyRequest {
   user_id: string;
+  liked: boolean;
   address: string;
   city: string;
   price: number;

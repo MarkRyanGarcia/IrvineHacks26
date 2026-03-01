@@ -10,6 +10,8 @@ class Properties(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
 
+    liked: Mapped[bool] = mapped_column(nullable=False, default=False)
+
     address: Mapped[str] = mapped_column(String, nullable=False)
     city: Mapped[str] = mapped_column(String, nullable=False)
     price: Mapped[float] = mapped_column(Float, nullable=False)

@@ -494,11 +494,12 @@ export default function DashboardPage() {
 
   const handleSwipe = (action: "like" | "dislike") => {
     const top = deck[deck.length - 1];
-    if (action === "like" && top) {
+    if (top) {
       setLiked(l => [...l, top]);
       if (userId) {
         saveProperty({
           user_id: userId,
+          liked: action === "like",
           address: top.address,
           city: top.city,
           price: top.price,
