@@ -46,6 +46,18 @@ function filterByBedrooms(props: PropertyCard[], bedroomPref: string | null): Pr
   }
 }
 
+function filterByBudget(props: PropertyCard[], budgetPref: string | null): PropertyCard[] {
+  if (!budgetPref) return props;
+  const price = (p: PropertyCard) => p.price ?? 0;
+  switch (budgetPref) {
+    case "Under $500k": return props.filter(p => price(p) < 500_000);
+    case "$500–750k": return props.filter(p => price(p) >= 500_000 && price(p) < 750_000);
+    case "$750k–1M": return props.filter(p => price(p) >= 750_000 && price(p) < 1_000_000);
+    case "$1M+": return props.filter(p => price(p) >= 1_000_000);
+    default: return props;
+  }
+}
+
 /* ── MatchArc ── */
 function MatchArc({ pct }: { pct: number }) {
   const r = 16, stroke = 3, circ = 2 * Math.PI * r;
@@ -507,6 +519,7 @@ export default function DashboardPage() {
   const surveyDone = surveyStep >= SURVEY.length;
 
   const bedroomPref = surveyAnswers[0] ?? null;
+  const budgetPref = surveyAnswers[2] ?? null;
 
   // Load live properties
   useEffect(() => {
@@ -516,12 +529,13 @@ export default function DashboardPage() {
       .finally(() => setPropertiesLoading(false));
   }, []);
 
-  // Re-filter deck when bedroom preference or properties change
+  // Re-filter deck when preferences or properties change
   useEffect(() => {
     if (properties.length === 0) return;
-    const filtered = filterByBedrooms(properties, bedroomPref);
+    let filtered = filterByBedrooms(properties, bedroomPref);
+    filtered = filterByBudget(filtered, budgetPref);
     setDeck([...filtered].reverse());
-  }, [bedroomPref, properties]);
+  }, [bedroomPref, budgetPref, properties]);
 
   useEffect(() => {
     if (userId) fetchSavedProperties(userId).then(setSaved).catch(() => { });
@@ -682,7 +696,7 @@ export default function DashboardPage() {
                     <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: "#2a4a42", marginBottom: 8 }}>All caught up</p>
                     <p style={{ fontSize: 14, color: "rgba(42,74,66,0.45)", marginBottom: 20 }}>You've reviewed all your matches.</p>
                     <div style={{ display: "flex", gap: 12 }}>
-                      <button onClick={() => { const filtered = filterByBedrooms(properties, bedroomPref); setDeck([...filtered].reverse()); setLiked([]); }} style={{
+                      <button onClick={() => { let filtered = filterByBedrooms(properties, bedroomPref); filtered = filterByBudget(filtered, budgetPref); setDeck([...filtered].reverse()); setLiked([]); }} style={{
                         background: "rgba(42,74,66,0.09)", border: "1px solid rgba(42,74,66,0.18)",
                         borderRadius: 20, padding: "8px 22px", fontSize: 13, color: "#2a4a42", cursor: "pointer", fontFamily: "inherit",
                       }}>Start over</button>
