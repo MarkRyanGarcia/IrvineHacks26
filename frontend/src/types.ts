@@ -1,16 +1,60 @@
 export interface PropertyCard {
-  id: number;
-  address: string;
-  city: string;
-  zip: string;
-  price: number;
-  sqft: number;
-  beds: number;
-  baths: number;
-  property_type: string;
-  school_score: number;
-  commute_minutes: number;
-  image: string;
+  // Internal
+  zpid?: number;
+  image?: string;
+
+  // Address
+  street_address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+
+  // Coordinates
+  latitude?: number;
+  longitude?: number;
+
+  // Listing info
+  price?: number;
+  price_per_sqft?: number;
+  price_change?: number;
+  price_changed_date?: string;
+  listing_status?: string;
+  days_on_zillow?: number;
+  listing_date?: string;
+
+  // Property details
+  property_type?: string;
+  beds?: number;
+  baths?: number;
+  sqft?: number;
+  lot_size?: number;
+  lot_size_unit?: string;
+  year_built?: number;
+  is_new_construction?: boolean;
+
+  // Estimates
+  zestimate?: number;
+  rent_zestimate?: number;
+
+  // Tax
+  tax_assessed_value?: number;
+  tax_assessment_year?: string;
+
+  // Media flags
+  has_vr_model?: boolean;
+  has_videos?: boolean;
+  has_floor_plan?: boolean;
+  is_showcase_listing?: boolean;
+
+  // Open house
+  open_house_start?: string;
+  open_house_end?: string;
+
+  // Broker
+  broker_name?: string;
+
+  // Thumbnail
+  photo_url?: string;
 }
 
 export interface SwipeProfile {
@@ -81,30 +125,119 @@ export interface SavedProperty {
   id: number;
   user_id: string;
   liked: boolean;
-  address: string;
-  city: string;
-  price: number;
-  sqft: number;
-  beds: number;
-  baths: number;
-  property_type: string;
-  school_score: number;
-  zip_code: string;
-  commute_minutes: number;
+  zpid?: number;
+
+  // Address
+  street_address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+
+  // Coordinates
+  latitude?: number;
+  longitude?: number;
+
+  // Listing info
+  price?: number;
+  price_per_sqft?: number;
+  price_change?: number;
+  price_changed_date?: string;
+  listing_status?: string;
+  days_on_zillow?: number;
+  listing_date?: string;
+
+  // Property details
+  property_type?: string;
+  beds?: number;
+  baths?: number;
+  sqft?: number;
+  lot_size?: number;
+  lot_size_unit?: string;
+  year_built?: number;
+  is_new_construction?: boolean;
+
+  // Estimates
+  zestimate?: number;
+  rent_zestimate?: number;
+
+  // Tax
+  tax_assessed_value?: number;
+  tax_assessment_year?: string;
+
+  // Media flags
+  has_vr_model?: boolean;
+  has_videos?: boolean;
+  has_floor_plan?: boolean;
+  is_showcase_listing?: boolean;
+
+  // Open house
+  open_house_start?: string;
+  open_house_end?: string;
+
+  // Broker
+  broker_name?: string;
+
+  // Thumbnail
+  photo_url?: string;
+
   created_at: string;
 }
 
 export interface SavePropertyRequest {
   user_id: string;
   liked: boolean;
-  address: string;
-  city: string;
-  price: number;
-  sqft: number;
-  beds: number;
-  baths: number;
-  property_type: string;
-  school_score: number;
-  zip_code: string;
-  commute_minutes: number;
+  zpid?: number;
+
+  // Address
+  street_address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+
+  // Coordinates
+  latitude?: number;
+  longitude?: number;
+
+  // Listing info
+  price?: number;
+  price_per_sqft?: number;
+  price_change?: number;
+  price_changed_date?: string;
+  listing_status?: string;
+  days_on_zillow?: number;
+  listing_date?: string;
+
+  // Property details
+  property_type?: string;
+  beds?: number;
+  baths?: number;
+  sqft?: number;
+  lot_size?: number;
+  lot_size_unit?: string;
+  year_built?: number;
+  is_new_construction?: boolean;
+
+  // Estimates
+  zestimate?: number;
+  rent_zestimate?: number;
+
+  // Tax
+  tax_assessed_value?: number;
+  tax_assessment_year?: string;
+
+  // Media flags
+  has_vr_model?: boolean;
+  has_videos?: boolean;
+  has_floor_plan?: boolean;
+  is_showcase_listing?: boolean;
+
+  // Open house
+  open_house_start?: string;
+  open_house_end?: string;
+
+  // Broker
+  broker_name?: string;
+
+  // Thumbnail
+  photo_url?: string;
 }

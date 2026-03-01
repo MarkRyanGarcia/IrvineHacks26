@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserButton, useUser } from "@clerk/clerk-react";
-import { MOCK_PROPERTIES } from "../data/properties";
+import { fetchProperties } from "../data/properties";
 import type { PropertyCard, SavedProperty, ChatMessage } from "../types";
 import { sendChat, saveProperty, fetchSavedProperties, deleteSavedProperty, fetchBulkAppreciation } from "../api";
 
@@ -10,21 +10,20 @@ function fmtPrice(n: number) {
   return n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : `$${(n / 1_000).toLocaleString()}k`;
 }
 function matchScore(p: PropertyCard) {
-  const schoolW = Math.min(p.school_score / 10, 1) * 30;
-  const commuteW = Math.max(0, 1 - p.commute_minutes / 50) * 20;
-  const priceW = Math.max(0, 1 - p.price / 2_000_000) * 30;
-  const sizeW = Math.min(p.sqft / 3000, 1) * 20;
-  return Math.round(Math.min(98, Math.max(55, schoolW + commuteW + priceW + sizeW + 20)));
+  const priceW = Math.max(0, 1 - (p.price ?? 0) / 2_000_000) * 50;
+  const sizeW = Math.min((p.sqft ?? 0) / 3000, 1) * 50;
+  return Math.round(Math.min(98, Math.max(55, priceW + sizeW + 20)));
 }
 function tags(p: PropertyCard) {
   const t: { label: string; color: string }[] = [];
-  if (p.school_score >= 8) t.push({ label: "Great Schools", color: "#6db8a0" });
-  if (p.school_score <= 6) t.push({ label: "Avg. Schools", color: "#c4a882" });
-  if (p.commute_minutes <= 15) t.push({ label: "Short Commute", color: "#7ab3c8" });
-  if (p.price < 600000) t.push({ label: "Under Budget", color: "#6db8a0" });
-  if (p.price > 1000000) t.push({ label: "Premium", color: "#c4a882" });
-  if (p.property_type === "Condo") t.push({ label: "Condo", color: "#9eb8d4" });
-  if (p.sqft >= 2000) t.push({ label: "Spacious", color: "#7ab3c8" });
+  if (p.is_new_construction) t.push({ label: "New Construction", color: "#6db8a0" });
+  if ((p.days_on_zillow ?? 99) <= 7) t.push({ label: "Just Listed", color: "#6db8a0" });
+  if ((p.price_change ?? 0) < 0) t.push({ label: "Price Cut", color: "#c4a882" });
+  if ((p.price ?? 0) < 600000) t.push({ label: "Under Budget", color: "#6db8a0" });
+  if ((p.price ?? 0) > 1000000) t.push({ label: "Premium", color: "#c4a882" });
+  if (p.property_type === "condo") t.push({ label: "Condo", color: "#9eb8d4" });
+  if ((p.sqft ?? 0) >= 2000) t.push({ label: "Spacious", color: "#7ab3c8" });
+  if (p.is_showcase_listing) t.push({ label: "Showcase", color: "#7ab3c8" });
   return t.slice(0, 3);
 }
 
@@ -201,10 +200,16 @@ function SwipeCard({ listing, onSwipe, isTop, stackIndex, appreciationPct }: Swi
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "10px 14px 12px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 7 }}>
               <div>
-                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 500, color: "white", lineHeight: 1.2 }}>{listing.address}</h2>
-                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.58)", marginTop: 3 }}>{listing.city} · {listing.beds}bd {listing.baths}ba · {listing.sqft.toLocaleString()}</p>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 500, color: "white", lineHeight: 1.2 }}>
+                  {listing.street_address}
+                </h2>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.58)", marginTop: 3 }}>
+                  {listing.city} · {listing.beds}bd {listing.baths}ba · {(listing.sqft ?? 0).toLocaleString()}
+                </p>
               </div>
-              <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 500, color: "white", whiteSpace: "nowrap", paddingLeft: 10 }}>{fmtPrice(listing.price)}</span>
+              <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 500, color: "white", whiteSpace: "nowrap", paddingLeft: 10 }}>
+                {fmtPrice(listing.price ?? 0)}
+              </span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 7 }}>
               {cardTags.map((tag, i) => (
@@ -217,10 +222,7 @@ function SwipeCard({ listing, onSwipe, isTop, stackIndex, appreciationPct }: Swi
             </div>
             {appreciationPct != null && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-                <span style={{
-                  fontSize: 11, fontWeight: 700,
-                  color: appreciationPct >= 0 ? "#6db8a0" : "#c47a6a",
-                }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: appreciationPct >= 0 ? "#6db8a0" : "#c47a6a" }}>
                   {appreciationPct >= 0 ? "▲" : "▼"} {Math.abs(appreciationPct * 100).toFixed(1)}%
                 </span>
                 <span style={{ fontSize: 10, color: "rgba(255,255,255,0.42)" }}>predicted 12-mo value change</span>
@@ -248,7 +250,7 @@ function SwipeCard({ listing, onSwipe, isTop, stackIndex, appreciationPct }: Swi
   );
 }
 
-/* ── Inline Chat Widget — idle / inline / fullscreen ── */
+/* ── Inline Chat Widget ── */
 type ChatMode = "idle" | "inline" | "fullscreen";
 
 function InlineChat() {
@@ -286,7 +288,6 @@ function InlineChat() {
 
   const chatContent = (isFullscreen: boolean) => (
     <>
-      {/* Header */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: isFullscreen ? "16px 24px" : "10px 14px",
@@ -324,7 +325,6 @@ function InlineChat() {
         </div>
       </div>
 
-      {/* Messages */}
       <div style={{
         flex: 1, overflowY: "auto", padding: isFullscreen ? "20px 28px" : "10px 12px",
         display: "flex", flexDirection: "column", gap: isFullscreen ? 12 : 8,
@@ -366,7 +366,6 @@ function InlineChat() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <form onSubmit={e => { e.preventDefault(); send(); }} style={{
         display: "flex", gap: 6,
         padding: isFullscreen ? "14px 24px 18px" : "8px 12px 10px",
@@ -395,7 +394,6 @@ function InlineChat() {
     </>
   );
 
-  /* ── Fullscreen overlay ── */
   if (mode === "fullscreen") {
     return (
       <div style={{
@@ -416,7 +414,6 @@ function InlineChat() {
     );
   }
 
-  /* ── Idle CTA state ── */
   if (mode === "idle") {
     return (
       <div style={{
@@ -466,7 +463,6 @@ function InlineChat() {
     );
   }
 
-  /* ── Inline active chat ── */
   return (
     <div style={{
       background: "rgba(38,72,64,0.82)", backdropFilter: "blur(20px)",
@@ -483,7 +479,10 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useUser();
   const userId = user?.id ?? "";
-  const [deck, setDeck] = useState(() => [...MOCK_PROPERTIES].reverse());
+
+  const [properties, setProperties] = useState<PropertyCard[]>([]);
+  const [propertiesLoading, setPropertiesLoading] = useState(true);
+  const [deck, setDeck] = useState<PropertyCard[]>([]);
   const [liked, setLiked] = useState<PropertyCard[]>([]);
   const [saved, setSaved] = useState<SavedProperty[]>([]);
   const [surveyStep, setSurveyStep] = useState(0);
@@ -494,45 +493,80 @@ export default function DashboardPage() {
   const canvasRef = useWaveCanvas(tab === "explore");
   const surveyDone = surveyStep >= SURVEY.length;
 
+  // Load live properties
   useEffect(() => {
-    if (userId) fetchSavedProperties(userId).then(setSaved).catch(() => {});
+    fetchProperties()
+      .then((props) => {
+        setProperties(props);
+        setDeck([...props].reverse());
+      })
+      .catch(console.error)
+      .finally(() => setPropertiesLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (userId) fetchSavedProperties(userId).then(setSaved).catch(() => { });
   }, [userId]);
 
   useEffect(() => {
-    const mockZips = MOCK_PROPERTIES.map(p => p.zip);
-    const savedZips = saved.map(p => p.zip_code);
-    const allZips = [...new Set([...mockZips, ...savedZips])];
+    const propertyZips = properties.map(p => p.zip_code).filter(Boolean) as string[];
+    const savedZips = saved.map(p => p.zip_code).filter(Boolean) as string[];
+    const allZips = [...new Set([...propertyZips, ...savedZips])];
     if (allZips.length > 0) {
-      fetchBulkAppreciation(allZips).then(r => setAppreciation(prev => ({ ...prev, ...r.results }))).catch(() => {});
+      fetchBulkAppreciation(allZips).then(r => setAppreciation(prev => ({ ...prev, ...r.results }))).catch(() => { });
     }
-  }, [saved]);
+  }, [saved, properties]);
 
   const handleSwipe = (action: "like" | "dislike") => {
     const top = deck[deck.length - 1];
-    if (action === "like" && top) {
-      setLiked(l => [...l, top]);
+    if (top) {
+      if (action === "like") setLiked(l => [...l, top]);
       if (userId) {
         saveProperty({
           user_id: userId,
-          address: top.address,
+          liked: action === "like",
+          zpid: top.zpid,
+          street_address: top.street_address,
           city: top.city,
+          state: top.state,
+          zip_code: top.zip_code,
+          latitude: top.latitude,
+          longitude: top.longitude,
           price: top.price,
-          sqft: top.sqft,
+          price_per_sqft: top.price_per_sqft,
+          price_change: top.price_change,
+          price_changed_date: top.price_changed_date,
+          listing_status: top.listing_status,
+          days_on_zillow: top.days_on_zillow,
+          listing_date: top.listing_date,
+          property_type: top.property_type,
           beds: top.beds,
           baths: top.baths,
-          property_type: top.property_type,
-          school_score: top.school_score,
-          zip_code: top.zip,
-          commute_minutes: top.commute_minutes,
-          liked: true,
-        }).then(s => setSaved(prev => [...prev, s])).catch(() => {});
+          sqft: top.sqft,
+          lot_size: top.lot_size,
+          lot_size_unit: top.lot_size_unit,
+          year_built: top.year_built,
+          is_new_construction: top.is_new_construction,
+          zestimate: top.zestimate,
+          rent_zestimate: top.rent_zestimate,
+          tax_assessed_value: top.tax_assessed_value,
+          tax_assessment_year: top.tax_assessment_year,
+          has_vr_model: top.has_vr_model,
+          has_videos: top.has_videos,
+          has_floor_plan: top.has_floor_plan,
+          is_showcase_listing: top.is_showcase_listing,
+          open_house_start: top.open_house_start,
+          open_house_end: top.open_house_end,
+          broker_name: top.broker_name,
+          photo_url: top.image,
+        }).then(s => setSaved(prev => [...prev, s])).catch(() => { });
       }
     }
     setDeck(d => d.slice(0, -1));
   };
 
   const handleRemoveSaved = (id: number) => {
-    deleteSavedProperty(id).then(() => setSaved(prev => prev.filter(p => p.id !== id))).catch(() => {});
+    deleteSavedProperty(id).then(() => setSaved(prev => prev.filter(p => p.id !== id))).catch(() => { });
   };
 
   const handleAnswer = (opt: string) => {
@@ -581,7 +615,9 @@ export default function DashboardPage() {
           </nav>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {(saved.length > 0 || liked.length > 0) && (
-              <span onClick={() => setTab("saved")} style={{ fontSize: 12, color: "rgba(42,74,66,0.6)", background: "rgba(255,255,255,0.5)", borderRadius: 20, padding: "4px 12px", cursor: "pointer" }}>♥ {saved.length || liked.length} saved</span>
+              <span onClick={() => setTab("saved")} style={{ fontSize: 12, color: "rgba(42,74,66,0.6)", background: "rgba(255,255,255,0.5)", borderRadius: 20, padding: "4px 12px", cursor: "pointer" }}>
+                ♥ {saved.length || liked.length} saved
+              </span>
             )}
             <UserButton />
           </div>
@@ -597,7 +633,14 @@ export default function DashboardPage() {
                 <p style={{ fontSize: 10, color: "rgba(42,74,66,0.32)" }}>drag or tap ✕ / ♥</p>
               </div>
               <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
-                {deck.length === 0 ? (
+                {propertiesLoading ? (
+                  <div style={{
+                    position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "rgba(255,255,255,0.38)", backdropFilter: "blur(14px)", borderRadius: 20,
+                  }}>
+                    <p style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, color: "#2a4a42", opacity: 0.6 }}>Loading properties…</p>
+                  </div>
+                ) : deck.length === 0 ? (
                   <div style={{
                     position: "absolute", inset: 0, display: "flex", flexDirection: "column",
                     alignItems: "center", justifyContent: "center",
@@ -607,7 +650,7 @@ export default function DashboardPage() {
                     <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: "#2a4a42", marginBottom: 8 }}>All caught up</p>
                     <p style={{ fontSize: 14, color: "rgba(42,74,66,0.45)", marginBottom: 20 }}>You've reviewed all your matches.</p>
                     <div style={{ display: "flex", gap: 12 }}>
-                      <button onClick={() => { setDeck([...MOCK_PROPERTIES].reverse()); setLiked([]); }} style={{
+                      <button onClick={() => { setDeck([...properties].reverse()); setLiked([]); }} style={{
                         background: "rgba(42,74,66,0.09)", border: "1px solid rgba(42,74,66,0.18)",
                         borderRadius: 20, padding: "8px 22px", fontSize: 13, color: "#2a4a42", cursor: "pointer", fontFamily: "inherit",
                       }}>Start over</button>
@@ -620,7 +663,16 @@ export default function DashboardPage() {
                 ) : (
                   deck.slice(-3).map((listing, i) => {
                     const stackIndex = Math.min(deck.length, 3) - 1 - i;
-                    return <SwipeCard key={listing.id} listing={listing} onSwipe={handleSwipe} isTop={stackIndex === 0} stackIndex={stackIndex} appreciationPct={appreciation[listing.zip] ?? null} />;
+                    return (
+                      <SwipeCard
+                        key={listing.zpid ?? i}
+                        listing={listing}
+                        onSwipe={handleSwipe}
+                        isTop={stackIndex === 0}
+                        stackIndex={stackIndex}
+                        appreciationPct={appreciation[listing.zip_code ?? ""] ?? null}
+                      />
+                    );
                   })
                 )}
               </div>
@@ -628,7 +680,6 @@ export default function DashboardPage() {
 
             {/* Right — widgets */}
             <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
-              {/* Survey */}
               <div style={{
                 background: "rgba(255,255,255,0.46)", backdropFilter: "blur(16px)",
                 borderRadius: 18, padding: "20px 18px",
@@ -658,8 +709,6 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-
-              {/* Inline Chat */}
               <InlineChat />
             </div>
           </div>
@@ -675,10 +724,8 @@ export default function DashboardPage() {
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
                 {saved.length > 0 ? saved.filter(item => item.liked === true).map(p => {
-                  const image =
-                    MOCK_PROPERTIES.find(m => m.address === p.address)?.image ??
-                    liked.find(l => l.address === p.address)?.image;
-                  const appPct = appreciation[p.zip_code];
+                  const image = p.photo_url ?? liked.find(l => l.zpid === p.zpid)?.image;
+                  const appPct = appreciation[p.zip_code ?? ""];
                   return (
                     <div key={p.id} style={{ background: "rgba(255,255,255,0.5)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(28,58,53,0.08)" }}>
                       {image ? (
@@ -689,8 +736,8 @@ export default function DashboardPage() {
                         </div>
                       )}
                       <div style={{ padding: "12px 16px" }}>
-                        <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: "#2a4a42", marginBottom: 4 }}>{p.address}</h3>
-                        <p style={{ fontSize: 12, color: "rgba(42,74,66,0.5)" }}>{p.city} · {p.beds}bd {p.baths}ba · {p.sqft.toLocaleString()} sqft</p>
+                        <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: "#2a4a42", marginBottom: 4 }}>{p.street_address}</h3>
+                        <p style={{ fontSize: 12, color: "rgba(42,74,66,0.5)" }}>{p.city} · {p.beds}bd {p.baths}ba · {(p.sqft ?? 0).toLocaleString()} sqft</p>
                         {appPct != null && (
                           <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 6, padding: "3px 10px", borderRadius: 12, background: appPct >= 0 ? "rgba(109,184,160,0.12)" : "rgba(196,122,106,0.10)" }}>
                             <span style={{ fontSize: 12, fontWeight: 700, color: appPct >= 0 ? "#3a9a7e" : "#c47a6a" }}>
@@ -700,7 +747,7 @@ export default function DashboardPage() {
                           </div>
                         )}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                          <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, color: "#2a4a42" }}>{fmtPrice(p.price)}</span>
+                          <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, color: "#2a4a42" }}>{fmtPrice(p.price ?? 0)}</span>
                           <div style={{ display: "flex", gap: 6 }}>
                             <button onClick={() => handleRemoveSaved(p.id)} style={{
                               background: "rgba(196,122,106,0.1)", border: "none", borderRadius: 10, padding: "6px 12px",
@@ -715,14 +762,14 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   );
-                }) : liked.map(p => {
-                  const appPct = appreciation[p.zip];
+                }) : liked.map((p, i) => {
+                  const appPct = appreciation[p.zip_code ?? ""];
                   return (
-                    <div key={p.id} style={{ background: "rgba(255,255,255,0.5)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(28,58,53,0.08)" }}>
+                    <div key={p.zpid ?? i} style={{ background: "rgba(255,255,255,0.5)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(28,58,53,0.08)" }}>
                       <img src={p.image} alt="" style={{ width: "100%", height: 160, objectFit: "cover" }} />
                       <div style={{ padding: "12px 16px" }}>
-                        <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: "#2a4a42", marginBottom: 4 }}>{p.address}</h3>
-                        <p style={{ fontSize: 12, color: "rgba(42,74,66,0.5)" }}>{p.city} · {p.beds}bd {p.baths}ba · {p.sqft.toLocaleString()} sqft</p>
+                        <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: "#2a4a42", marginBottom: 4 }}>{p.street_address}</h3>
+                        <p style={{ fontSize: 12, color: "rgba(42,74,66,0.5)" }}>{p.city} · {p.beds}bd {p.baths}ba · {(p.sqft ?? 0).toLocaleString()} sqft</p>
                         {appPct != null && (
                           <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 6, padding: "3px 10px", borderRadius: 12, background: appPct >= 0 ? "rgba(109,184,160,0.12)" : "rgba(196,122,106,0.10)" }}>
                             <span style={{ fontSize: 12, fontWeight: 700, color: appPct >= 0 ? "#3a9a7e" : "#c47a6a" }}>
@@ -732,8 +779,8 @@ export default function DashboardPage() {
                           </div>
                         )}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                          <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, color: "#2a4a42" }}>{fmtPrice(p.price)}</span>
-                          <button onClick={() => navigate("/analyze", { state: { prefill: { zip: p.zip, current_price: p.price, offer_price: p.price } } })} style={{
+                          <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, color: "#2a4a42" }}>{fmtPrice(p.price ?? 0)}</span>
+                          <button onClick={() => navigate("/analyze", { state: { prefill: { zip: p.zip_code, current_price: p.price, offer_price: p.price } } })} style={{
                             background: "rgba(42,74,66,0.1)", border: "none", borderRadius: 10, padding: "6px 14px",
                             fontSize: 12, color: "#2a4a42", cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
                           }}>Analyze →</button>
@@ -747,7 +794,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-
     </div>
   );
 }

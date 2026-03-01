@@ -1,10 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import PropertyCard from "../components/PropertyCard";
 import ProgressBar from "../components/ProgressBar";
-import { MOCK_PROPERTIES } from "../data/properties";
+import { fetchProperties } from "../data/properties";
 import type { PropertyCard as CardType, SwipeProfile } from "../types";
 
 function median(arr: number[]) {
@@ -19,14 +19,23 @@ export default function SwipePage() {
   const [liked, setLiked] = useState<CardType[]>([]);
   const [disliked, setDisliked] = useState<CardType[]>([]);
   const [exiting, setExiting] = useState<"left" | "right" | null>(null);
+  const [properties, setProperties] = useState<CardType[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProperties()
+      .then(setProperties)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
   const likeOpacity = useTransform(x, [0, 100], [0, 1]);
   const nopeOpacity = useTransform(x, [-100, 0], [1, 0]);
 
-  const current = MOCK_PROPERTIES[index];
-  const done = index >= MOCK_PROPERTIES.length;
+  const current = properties[index];
+  const done = index >= properties.length;
 
   const buildProfile = useCallback(
     (likedCards: CardType[], dislikedCards: CardType[]): SwipeProfile => {
@@ -40,30 +49,37 @@ export default function SwipePage() {
           stretch_behavior: 0.5,
         };
       }
-      const medPrice = median(all.map((p) => p.price));
-      const likedPrices = likedCards.map((p) => p.price);
+
+      const medPrice = median(all.map((p) => p.price ?? 0));
+
+      const likedPrices = likedCards.map((p) => p.price ?? 0);
       const avgLikedPrice =
         likedPrices.length > 0
           ? likedPrices.reduce((a, b) => a + b, 0) / likedPrices.length
           : medPrice;
 
-      const likedSqft = likedCards.map((p) => p.sqft);
+      const likedSqft = likedCards.map((p) => p.sqft ?? 0);
       const avgSqft =
         likedSqft.length > 0
           ? likedSqft.reduce((a, b) => a + b, 0) / likedSqft.length
           : 1500;
 
-      const likedSchool = likedCards.map((p) => p.school_score);
-      const avgSchool =
-        likedSchool.length > 0
-          ? likedSchool.reduce((a, b) => a + b, 0) / likedSchool.length
-          : 7;
+      // Use days_on_zillow as a proxy for commute tolerance
+      // (willingness to consider properties that have been on market longer)
+      const likedDays = likedCards.map((p) => p.days_on_zillow ?? 30);
+      const avgDays =
+        likedDays.length > 0
+          ? likedDays.reduce((a, b) => a + b, 0) / likedDays.length
+          : 30;
 
-      const likedCommute = likedCards.map((p) => p.commute_minutes);
-      const avgCommute =
-        likedCommute.length > 0
-          ? likedCommute.reduce((a, b) => a + b, 0) / likedCommute.length
-          : 20;
+      // Use zestimate vs price ratio as a proxy for school/value importance
+      const likedValueRatios = likedCards
+        .filter((p) => p.zestimate != null && p.price != null)
+        .map((p) => (p.zestimate ?? 0) / (p.price ?? 1));
+      const avgValueRatio =
+        likedValueRatios.length > 0
+          ? likedValueRatios.reduce((a, b) => a + b, 0) / likedValueRatios.length
+          : 1;
 
       const stretch =
         likedPrices.length > 0
@@ -73,8 +89,8 @@ export default function SwipePage() {
       return {
         price_sensitivity: Math.min(1, Math.max(0, 1 - avgLikedPrice / (medPrice * 2))),
         size_preference: Math.min(1, avgSqft / 3000),
-        school_importance: avgSchool / 10,
-        commute_tolerance: Math.min(1, avgCommute / 40),
+        school_importance: Math.min(1, Math.max(0, avgValueRatio)),
+        commute_tolerance: Math.min(1, avgDays / 60),
         stretch_behavior: stretch,
       };
     },
@@ -98,13 +114,13 @@ export default function SwipePage() {
         const nextIdx = index + 1;
         setIndex(nextIdx);
 
-        if (nextIdx >= MOCK_PROPERTIES.length) {
+        if (nextIdx >= properties.length) {
           const profile = buildProfile(newLiked, newDisliked);
           navigate("/quiz", { state: { swipeProfile: profile } });
         }
       }, 300);
     },
-    [index, done, current, liked, disliked, navigate, buildProfile, x]
+    [index, done, current, liked, disliked, navigate, buildProfile, x, properties.length]
   );
 
   const handleDragEnd = useCallback(
@@ -123,6 +139,14 @@ export default function SwipePage() {
     [handleSwipe, x]
   );
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-secondary animate-pulse">Loading properties...</p>
+      </div>
+    );
+  }
+
   if (done) return null;
 
   return (
@@ -132,13 +156,12 @@ export default function SwipePage() {
         Swipe right on homes you love, left to pass
       </p>
 
-      <ProgressBar step={index} total={MOCK_PROPERTIES.length} />
+      <ProgressBar step={index} total={properties.length} />
 
       <div className="relative w-full max-w-sm h-[440px]">
-        {/* Next card underneath */}
-        {index + 1 < MOCK_PROPERTIES.length && (
+        {index + 1 < properties.length && (
           <div className="absolute inset-0 flex items-center justify-center scale-95 opacity-50">
-            <PropertyCard property={MOCK_PROPERTIES[index + 1]} />
+            <PropertyCard property={properties[index + 1]} />
           </div>
         )}
 
@@ -158,7 +181,6 @@ export default function SwipePage() {
           }
           transition={{ duration: 0.3 }}
         >
-          {/* Like / Nope overlays */}
           <motion.div
             className="absolute top-8 right-8 z-10 bg-green-500/90 text-white text-lg font-bold px-4 py-1 rounded-lg border-2 border-green-400 rotate-12"
             style={{ opacity: likeOpacity }}
@@ -198,7 +220,7 @@ export default function SwipePage() {
       </div>
 
       <p className="text-secondary/50 text-xs mt-4">
-        {index + 1} / {MOCK_PROPERTIES.length}
+        {index + 1} / {properties.length}
       </p>
     </div>
   );
