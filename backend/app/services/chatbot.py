@@ -57,6 +57,34 @@ def build_liked_properties_prompt(liked_properties: list[dict]) -> str:
         if p.get("price"):
             addr = f"{addr} — ${p['price']:,.0f}" if addr else f"${p['price']:,.0f}"
         lines.append(f"  {i}. {addr or 'Property'}")
+
+        # Open house
+        oh_start = p.get("open_house_start")
+        oh_end = p.get("open_house_end")
+        if oh_start or oh_end:
+            oh_str = f"Open house: {oh_start or '?'} to {oh_end or '?'}"
+            lines.append(f"      {oh_str}")
+
+        # Other useful fields
+        extras = []
+        if p.get("property_type"):
+            extras.append(f"type: {p['property_type']}")
+        if p.get("year_built"):
+            extras.append(f"built {p['year_built']}")
+        if p.get("lot_size") is not None and p.get("lot_size_unit"):
+            extras.append(f"lot: {p['lot_size']:.0f} {p['lot_size_unit']}")
+        elif p.get("lot_size") is not None:
+            extras.append(f"lot: {p['lot_size']:.0f} sqft")
+        if p.get("days_on_zillow") is not None:
+            extras.append(f"{p['days_on_zillow']} days on market")
+        if p.get("zestimate") is not None:
+            extras.append(f"zestimate: ${p['zestimate']:,.0f}")
+        if p.get("price_change") is not None and p.get("price_change") != 0:
+            extras.append(f"price change: ${p['price_change']:,.0f}")
+        if p.get("broker_name"):
+            extras.append(f"broker: {p['broker_name']}")
+        if extras:
+            lines.append(f"      ({'; '.join(extras)})")
     return "\n".join(lines) + "\n"
 
 
