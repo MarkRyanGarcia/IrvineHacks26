@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import user, analyze, chat, properties, appreciation
+from app.routers import user, analyze, chat, properties, appreciation, zillow
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,6 +23,7 @@ app.include_router(analyze.router)
 app.include_router(chat.router)
 app.include_router(properties.router)
 app.include_router(appreciation.router)
+app.include_router(zillow.router)
 
 
 @app.get("/health")
