@@ -34,6 +34,18 @@ const SURVEY = [
   { q: "How important are schools nearby?", options: ["Very", "Somewhat", "Not really", "No kids"] },
 ];
 
+function filterByBedrooms(props: PropertyCard[], bedroomPref: string | null): PropertyCard[] {
+  if (!bedroomPref) return props;
+  const beds = (p: PropertyCard) => p.beds ?? 0;
+  switch (bedroomPref) {
+    case "1–2": return props.filter(p => beds(p) >= 1 && beds(p) <= 2);
+    case "3": return props.filter(p => beds(p) >= 3);
+    case "4": return props.filter(p => beds(p) >= 4);
+    case "5+": return props.filter(p => beds(p) >= 5);
+    default: return props;
+  }
+}
+
 /* ── MatchArc ── */
 function MatchArc({ pct }: { pct: number }) {
   const r = 16, stroke = 3, circ = 2 * Math.PI * r;
@@ -486,6 +498,7 @@ export default function DashboardPage() {
   const [liked, setLiked] = useState<PropertyCard[]>([]);
   const [saved, setSaved] = useState<SavedProperty[]>([]);
   const [surveyStep, setSurveyStep] = useState(0);
+  const [surveyAnswers, setSurveyAnswers] = useState<(string | null)[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [fadeIn, setFadeIn] = useState(true);
   const [tab, setTab] = useState<"explore" | "saved">("explore");
@@ -493,16 +506,22 @@ export default function DashboardPage() {
   const canvasRef = useWaveCanvas(tab === "explore");
   const surveyDone = surveyStep >= SURVEY.length;
 
+  const bedroomPref = surveyAnswers[0] ?? null;
+
   // Load live properties
   useEffect(() => {
     fetchProperties()
-      .then((props) => {
-        setProperties(props);
-        setDeck([...props].reverse());
-      })
+      .then((props) => setProperties(props))
       .catch(console.error)
       .finally(() => setPropertiesLoading(false));
   }, []);
+
+  // Re-filter deck when bedroom preference or properties change
+  useEffect(() => {
+    if (properties.length === 0) return;
+    const filtered = filterByBedrooms(properties, bedroomPref);
+    setDeck([...filtered].reverse());
+  }, [bedroomPref, properties]);
 
   useEffect(() => {
     if (userId) fetchSavedProperties(userId).then(setSaved).catch(() => { });
@@ -575,6 +594,11 @@ export default function DashboardPage() {
 
   const handleAnswer = (opt: string) => {
     setSelected(opt);
+    setSurveyAnswers(prev => {
+      const next = [...prev];
+      next[surveyStep] = opt;
+      return next;
+    });
     setTimeout(() => {
       setFadeIn(false);
       setTimeout(() => { setSurveyStep(s => s + 1); setSelected(null); setFadeIn(true); }, 200);
@@ -658,7 +682,7 @@ export default function DashboardPage() {
                     <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: "#2a4a42", marginBottom: 8 }}>All caught up</p>
                     <p style={{ fontSize: 14, color: "rgba(42,74,66,0.45)", marginBottom: 20 }}>You've reviewed all your matches.</p>
                     <div style={{ display: "flex", gap: 12 }}>
-                      <button onClick={() => { setDeck([...properties].reverse()); setLiked([]); }} style={{
+                      <button onClick={() => { const filtered = filterByBedrooms(properties, bedroomPref); setDeck([...filtered].reverse()); setLiked([]); }} style={{
                         background: "rgba(42,74,66,0.09)", border: "1px solid rgba(42,74,66,0.18)",
                         borderRadius: 20, padding: "8px 22px", fontSize: 13, color: "#2a4a42", cursor: "pointer", fontFamily: "inherit",
                       }}>Start over</button>
