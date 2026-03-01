@@ -5,7 +5,7 @@ import { fetchProperties } from "../data/properties";
 import type { PropertyCard, SavedProperty, ChatMessage } from "../types";
 import { sendChat, saveProperty, fetchSavedProperties, deleteSavedProperty, fetchBulkAppreciation } from "../api";
 import SwipeCard from "../components/SwipeCard";
-import { SURVEY, fmtPrice, matchScore, tags, filterByBedrooms, filterByBudget } from "../data/dashboardData";
+import { SURVEY, fmtPrice, filterByBedrooms, filterByBudget } from "../data/dashboardData";
 
 /* ── MatchArc ── */
 export function MatchArc({ pct }: { pct: number }) {

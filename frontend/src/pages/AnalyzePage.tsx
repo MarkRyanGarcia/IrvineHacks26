@@ -4,6 +4,8 @@ import { useMutation } from "@tanstack/react-query";
 import { analyzeHome } from "../api";
 import type { AnalyzeRequest, QuizAnswers, SwipeProfile } from "../types";
 
+const LEO_ORANGE = "#FF6201";
+
 function useWaveCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -15,11 +17,11 @@ function useWaveCanvas() {
     const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
     window.addEventListener("resize", resize);
     const waves = [
-      { amp: 28, freq: 0.007, speed: 0.003, y: 0.3, color: "rgba(130,195,185,0.13)" },
-      { amp: 20, freq: 0.01, speed: 0.002, y: 0.46, color: "rgba(105,180,200,0.10)" },
-      { amp: 16, freq: 0.013, speed: 0.004, y: 0.6, color: "rgba(148,205,182,0.09)" },
-      { amp: 24, freq: 0.006, speed: 0.0015, y: 0.73, color: "rgba(90,172,198,0.08)" },
-      { amp: 12, freq: 0.017, speed: 0.005, y: 0.86, color: "rgba(128,202,187,0.07)" },
+      { amp: 32, freq: 0.007, speed: 0.001, y: 0.3, color: "rgba(255,98,1,0.18)" },
+      { amp: 24, freq: 0.01, speed: 0.0007, y: 0.46, color: "rgba(255,140,50,0.14)" },
+      { amp: 20, freq: 0.013, speed: 0.0012, y: 0.6, color: "rgba(255,180,100,0.12)" },
+      { amp: 28, freq: 0.006, speed: 0.0005, y: 0.73, color: "rgba(255,120,30,0.16)" },
+      { amp: 16, freq: 0.017, speed: 0.0015, y: 0.86, color: "rgba(255,98,1,0.10)" },
     ];
     let t = 0, raf: number;
     const draw = () => {
@@ -99,24 +101,24 @@ export default function AnalyzePage() {
     padding: "12px 16px",
     fontSize: 14,
     fontFamily: "'DM Sans', sans-serif",
-    color: "#2a4a42",
+    color: "#1a1a1a",
   });
 
   const fieldWrap = (key: string): React.CSSProperties => ({
     display: "flex",
     alignItems: "center",
-    background: "rgba(255,255,255,0.55)",
+    background: "rgba(255,255,255,0.9)",
     borderRadius: 14,
-    border: focused === key ? "1.5px solid rgba(109,184,160,0.5)" : "1.5px solid rgba(42,74,66,0.1)",
+    border: focused === key ? "1.5px solid rgba(255,98,1,0.5)" : "1.5px solid rgba(255,98,1,0.2)",
     transition: "border 0.2s, box-shadow 0.2s",
-    boxShadow: focused === key ? "0 0 0 3px rgba(109,184,160,0.12)" : "none",
+    boxShadow: focused === key ? "0 0 0 3px rgba(255,98,1,0.12)" : "none",
     overflow: "hidden",
   });
 
   const labelStyle: React.CSSProperties = {
     fontSize: 11,
     fontWeight: 600,
-    color: "rgba(42,74,66,0.5)",
+    color: "rgba(0,0,0,0.5)",
     letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 6,
@@ -125,7 +127,7 @@ export default function AnalyzePage() {
   const prefixStyle: React.CSSProperties = {
     paddingLeft: 14,
     fontSize: 14,
-    color: "rgba(42,74,66,0.35)",
+    color: "rgba(0,0,0,0.4)",
     fontFamily: "'DM Sans', sans-serif",
     userSelect: "none",
   };
@@ -133,18 +135,18 @@ export default function AnalyzePage() {
   const suffixStyle: React.CSSProperties = {
     paddingRight: 14,
     fontSize: 12,
-    color: "rgba(42,74,66,0.35)",
+    color: "rgba(0,0,0,0.4)",
     fontFamily: "'DM Sans', sans-serif",
     userSelect: "none",
   };
 
   return (
-    <div style={{ minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#2a4a42", display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <div style={{ minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#1a1a1a", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap');
         * { box-sizing: border-box; margin: 0; }
-        ::placeholder { color: rgba(42,74,66,0.25); }`}</style>
+        ::placeholder { color: rgba(0,0,0,0.3); }`}</style>
 
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, background: "linear-gradient(155deg, #c0eae2 0%, #acdae8 38%, #c0e8d2 68%, #aadee8 100%)" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, background: LEO_ORANGE }} />
       <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none" }} />
 
       <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: 520, padding: "0 24px" }}>
@@ -153,11 +155,11 @@ export default function AnalyzePage() {
           onClick={() => navigate("/dashboard")}
           style={{
             marginTop: 28, marginBottom: 12,
-            background: "rgba(255,255,255,0.4)",
-            border: "1px solid rgba(42,74,66,0.1)",
+            background: "rgba(255,255,255,0.9)",
+            border: "none",
             borderRadius: 10, padding: "6px 16px",
-            fontSize: 13, color: "#2a4a42", cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+            fontSize: 13, color: LEO_ORANGE, cursor: "pointer",
+            fontFamily: "'DM Sans', sans-serif", fontWeight: 600,
             display: "inline-flex", alignItems: "center", gap: 6,
           }}
         >
@@ -166,21 +168,21 @@ export default function AnalyzePage() {
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 500, color: "#2a4a42", marginBottom: 8 }}>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 500, color: "white", marginBottom: 8, textShadow: "0 1px 2px rgba(0,0,0,0.1)" }}>
             Analyze a home
           </h1>
-          <p style={{ fontSize: 14, color: "rgba(42,74,66,0.5)", lineHeight: 1.5 }}>
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.9)", lineHeight: 1.5 }}>
             Enter the details and we'll run 1,000 market simulations
           </p>
         </div>
 
         {/* Card */}
         <form onSubmit={submit} style={{
-          background: "rgba(255,255,255,0.42)",
+          background: "rgba(255,255,255,0.92)",
           backdropFilter: "blur(20px)",
           borderRadius: 22,
           padding: "32px 28px",
-          boxShadow: "0 8px 40px rgba(28,58,53,0.08)",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.1)",
           display: "flex", flexDirection: "column", gap: 20,
           marginBottom: 48,
         }}>
@@ -293,10 +295,10 @@ export default function AnalyzePage() {
           {/* Error */}
           {mutation.isError && (
             <div style={{
-              background: "rgba(196,168,130,0.12)",
-              border: "1px solid rgba(196,168,130,0.25)",
+              background: "rgba(220,38,38,0.1)",
+              border: "1px solid rgba(220,38,38,0.3)",
               borderRadius: 12, padding: "10px 16px",
-              fontSize: 13, color: "#8a6a3a", lineHeight: 1.5,
+              fontSize: 13, color: "#b91c1c", lineHeight: 1.5,
             }}>
               {(mutation.error as Error).message}
             </div>
@@ -312,7 +314,7 @@ export default function AnalyzePage() {
               padding: "14px 0",
               borderRadius: 14,
               border: "none",
-              background: mutation.isPending ? "rgba(42,74,66,0.5)" : "rgba(42,74,66,0.82)",
+              background: mutation.isPending ? "rgba(255,98,1,0.5)" : LEO_ORANGE,
               color: "white",
               fontSize: 15,
               fontWeight: 600,
@@ -323,7 +325,7 @@ export default function AnalyzePage() {
               justifyContent: "center",
               gap: 8,
               transition: "all 0.2s",
-              boxShadow: "0 4px 16px rgba(42,74,66,0.15)",
+              boxShadow: "0 4px 16px rgba(255,98,1,0.25)",
             }}
           >
             {mutation.isPending ? (

@@ -1,12 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { deleteSavedProperty, fetchBulkAppreciation, fetchSavedProperties, saveProperty, sendChat } from "../api";
+import { fetchBulkAppreciation, fetchSavedProperties, saveProperty, sendChat } from "../api";
 import Navbar from "../components/Navbar";
 import { useUser } from "@clerk/clerk-react";
-import { useNavigate } from "react-router-dom";
 import { fetchProperties } from "../data/properties";
 import type { PropertyCard, SavedProperty } from "../types";
-import { SURVEY } from "../data/dashboardData";
-import { useWaveCanvas } from "./DashboardPage";
 import SwipeCard from "../components/SwipeCard";
 // Import your SwipeCard component here
 // import SwipeCard from "../components/SwipeCard"; 
@@ -37,8 +34,6 @@ function SwipeCardPlaceholder({
     appreciation: Record<string, number | null>;
     setLiked: React.Dispatch<React.SetStateAction<PropertyCard[]>>;
 }) {
-    const navigate = useNavigate();
-
     return (
         <div
             style={{
@@ -106,15 +101,9 @@ export default function ChattingPage() {
     const [properties, setProperties] = useState<PropertyCard[]>([]);
     const [propertiesLoading, setPropertiesLoading] = useState(true);
     const [deck, setDeck] = useState<PropertyCard[]>([]);
-    const [liked, setLiked] = useState<PropertyCard[]>([]);
+    const [, setLiked] = useState<PropertyCard[]>([]);
     const [saved, setSaved] = useState<SavedProperty[]>([]);
-    const [surveyStep, setSurveyStep] = useState(0);
-    const [selected, setSelected] = useState<string | null>(null);
-    const [fadeIn, setFadeIn] = useState(true);
-    const [tab, setTab] = useState<"explore" | "saved">("explore");
     const [appreciation, setAppreciation] = useState<Record<string, number | null>>({});
-    const canvasRef = useWaveCanvas(tab === "explore");
-    const surveyDone = surveyStep >= SURVEY.length;
 
     // Load live properties
     useEffect(() => {
@@ -187,19 +176,6 @@ export default function ChattingPage() {
         }
         setDeck(d => d.slice(0, -1));
     };
-
-    const handleRemoveSaved = (id: number) => {
-        deleteSavedProperty(id).then(() => setSaved(prev => prev.filter(p => p.id !== id))).catch(() => { });
-    };
-
-    const handleAnswer = (opt: string) => {
-        setSelected(opt);
-        setTimeout(() => {
-            setFadeIn(false);
-            setTimeout(() => { setSurveyStep(s => s + 1); setSelected(null); setFadeIn(true); }, 200);
-        }, 340);
-    };
-
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");

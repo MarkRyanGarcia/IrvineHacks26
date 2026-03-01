@@ -29,11 +29,11 @@ function useWaveCanvas() {
     const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
     window.addEventListener("resize", resize);
     const waves = [
-      { amp: 32, freq: 0.007, speed: 0.003, y: 0.3, color: "rgba(255,98,1,0.18)" },
-      { amp: 24, freq: 0.01, speed: 0.002, y: 0.46, color: "rgba(255,140,50,0.14)" },
-      { amp: 20, freq: 0.013, speed: 0.004, y: 0.6, color: "rgba(255,180,100,0.12)" },
-      { amp: 28, freq: 0.006, speed: 0.0015, y: 0.73, color: "rgba(255,120,30,0.16)" },
-      { amp: 16, freq: 0.017, speed: 0.005, y: 0.86, color: "rgba(255,98,1,0.10)" },
+      { amp: 32, freq: 0.007, speed: 0.001, y: 0.3, color: "rgba(255,98,1,0.18)" },
+      { amp: 24, freq: 0.01, speed: 0.0007, y: 0.46, color: "rgba(255,140,50,0.14)" },
+      { amp: 20, freq: 0.013, speed: 0.0012, y: 0.6, color: "rgba(255,180,100,0.12)" },
+      { amp: 28, freq: 0.006, speed: 0.0005, y: 0.73, color: "rgba(255,120,30,0.16)" },
+      { amp: 16, freq: 0.017, speed: 0.0015, y: 0.86, color: "rgba(255,98,1,0.10)" },
     ];
     let t = 0, raf: number;
     const draw = () => {
@@ -184,6 +184,10 @@ export default function ReportPage() {
     if (result && !explain.data && !explain.isPending) explain.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const card: React.CSSProperties = {
     background: "rgba(255,255,255,0.92)", backdropFilter: "blur(20px)",
