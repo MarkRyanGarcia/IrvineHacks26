@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserButton } from "@clerk/clerk-react";
+import { UserButton, useUser } from "@clerk/clerk-react";
 import { MOCK_PROPERTIES } from "../data/properties";
-import type { PropertyCard } from "../types";
-import { sendChat } from "../api";
-import type { ChatMessage } from "../types";
+import type { PropertyCard, SavedProperty, ChatMessage } from "../types";
+import { sendChat, saveProperty, fetchSavedProperties, deleteSavedProperty } from "../api";
 
 /* ── helpers ── */
 function fmtPrice(n: number) {
@@ -477,8 +476,11 @@ function InlineChat() {
 /* ── Main Dashboard ── */
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { user } = useUser();
+  const userId = user?.id ?? "";
   const [deck, setDeck] = useState(() => [...MOCK_PROPERTIES].reverse());
   const [liked, setLiked] = useState<PropertyCard[]>([]);
+  const [saved, setSaved] = useState<SavedProperty[]>([]);
   const [surveyStep, setSurveyStep] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [fadeIn, setFadeIn] = useState(true);
@@ -486,10 +488,35 @@ export default function DashboardPage() {
   const canvasRef = useWaveCanvas(tab === "explore");
   const surveyDone = surveyStep >= SURVEY.length;
 
+  useEffect(() => {
+    if (userId) fetchSavedProperties(userId).then(setSaved).catch(() => {});
+  }, [userId]);
+
   const handleSwipe = (action: "like" | "dislike") => {
     const top = deck[deck.length - 1];
-    if (action === "like" && top) setLiked(l => [...l, top]);
+    if (action === "like" && top) {
+      setLiked(l => [...l, top]);
+      if (userId) {
+        saveProperty({
+          user_id: userId,
+          address: top.address,
+          city: top.city,
+          price: top.price,
+          sqft: top.sqft,
+          beds: top.beds,
+          baths: top.baths,
+          property_type: top.property_type,
+          school_score: top.school_score,
+          zip_code: top.zip,
+          commute_minutes: top.commute_minutes,
+        }).then(s => setSaved(prev => [...prev, s])).catch(() => {});
+      }
+    }
     setDeck(d => d.slice(0, -1));
+  };
+
+  const handleRemoveSaved = (id: number) => {
+    deleteSavedProperty(id).then(() => setSaved(prev => prev.filter(p => p.id !== id))).catch(() => {});
   };
 
   const handleAnswer = (opt: string) => {
@@ -537,8 +564,8 @@ export default function DashboardPage() {
             ))}
           </nav>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {liked.length > 0 && (
-              <span style={{ fontSize: 12, color: "rgba(42,74,66,0.6)", background: "rgba(255,255,255,0.5)", borderRadius: 20, padding: "4px 12px", backdropFilter: "blur(8px)" }}>♥ {liked.length} saved</span>
+            {(saved.length > 0 || liked.length > 0) && (
+              <span onClick={() => setTab("saved")} style={{ fontSize: 12, color: "rgba(42,74,66,0.6)", background: "rgba(255,255,255,0.5)", borderRadius: 20, padding: "4px 12px", cursor: "pointer" }}>♥ {saved.length || liked.length} saved</span>
             )}
             <UserButton />
           </div>
@@ -624,15 +651,45 @@ export default function DashboardPage() {
 
         {tab === "saved" && (
           <div style={{ flex: 1, padding: "20px 48px", overflowY: "auto" }}>
-            {liked.length === 0 ? (
+            {saved.length === 0 && liked.length === 0 ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 12 }}>
                 <p style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, color: "#2a4a42" }}>No saved homes yet</p>
                 <p style={{ fontSize: 14, color: "rgba(42,74,66,0.45)" }}>Swipe right on homes you like to save them here.</p>
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
-                {liked.map(p => (
-                  <div key={p.id} style={{ background: "rgba(255,255,255,0.5)", backdropFilter: "blur(14px)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(28,58,53,0.08)" }}>
+                {saved.length > 0 ? saved.map(p => {
+                  const localMatch = liked.find(l => l.address === p.address);
+                  return (
+                    <div key={p.id} style={{ background: "rgba(255,255,255,0.5)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(28,58,53,0.08)" }}>
+                      {localMatch ? (
+                        <img src={localMatch.image} alt="" style={{ width: "100%", height: 160, objectFit: "cover" }} />
+                      ) : (
+                        <div style={{ height: 120, background: "linear-gradient(135deg, rgba(109,184,160,0.15), rgba(90,172,198,0.15))", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ fontSize: 36 }}>🏠</span>
+                        </div>
+                      )}
+                      <div style={{ padding: "12px 16px" }}>
+                        <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: "#2a4a42", marginBottom: 4 }}>{p.address}</h3>
+                        <p style={{ fontSize: 12, color: "rgba(42,74,66,0.5)" }}>{p.city} · {p.beds}bd {p.baths}ba · {p.sqft.toLocaleString()} sqft</p>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                          <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, color: "#2a4a42" }}>{fmtPrice(p.price)}</span>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => handleRemoveSaved(p.id)} style={{
+                              background: "rgba(196,122,106,0.1)", border: "none", borderRadius: 10, padding: "6px 12px",
+                              fontSize: 12, color: "#c47a6a", cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
+                            }}>Remove</button>
+                            <button onClick={() => navigate("/analyze", { state: { prefill: { zip: p.zip_code, current_price: p.price, offer_price: p.price } } })} style={{
+                              background: "rgba(42,74,66,0.1)", border: "none", borderRadius: 10, padding: "6px 14px",
+                              fontSize: 12, color: "#2a4a42", cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
+                            }}>Analyze →</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }) : liked.map(p => (
+                  <div key={p.id} style={{ background: "rgba(255,255,255,0.5)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(28,58,53,0.08)" }}>
                     <img src={p.image} alt="" style={{ width: "100%", height: 160, objectFit: "cover" }} />
                     <div style={{ padding: "12px 16px" }}>
                       <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: "#2a4a42", marginBottom: 4 }}>{p.address}</h3>

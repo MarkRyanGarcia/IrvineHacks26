@@ -76,3 +76,33 @@ export interface ChatRequest {
 export interface ChatResponse {
   reply: string;
 }
+
+export interface SavedProperty {
+  id: number;
+  user_id: string;
+  address: string;
+  city: string;
+  price: number;
+  sqft: number;
+  beds: number;
+  baths: number;
+  property_type: string;
+  school_score: number;
+  zip_code: string;
+  commute_minutes: number;
+  created_at: string;
+}
+
+export interface SavePropertyRequest {
+  user_id: string;
+  address: string;
+  city: string;
+  price: number;
+  sqft: number;
+  beds: number;
+  baths: number;
+  property_type: string;
+  school_score: number;
+  zip_code: string;
+  commute_minutes: number;
+}
