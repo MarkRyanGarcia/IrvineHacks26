@@ -39,9 +39,9 @@ function SwipeCardPlaceholder({
         <div
             style={{
                 width: "100%",
-                maxWidth: "420px", // Slightly wider for swipe room
-                height: "600px",    // Increased height to accommodate card + action buttons
-                margin: "40px auto",
+                maxWidth: "340px",
+                height: "460px",
+                margin: "24px auto",
                 position: "relative",
                 zIndex: 50,         // Ensure it sits above background blobs
             }}
