@@ -52,8 +52,11 @@ function MatchArc({ pct }: { pct: number }) {
 }
 
 /* ── Wave canvas ── */
-function useWaveCanvas() {
+function useWaveCanvas(paused: boolean) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
@@ -63,21 +66,24 @@ function useWaveCanvas() {
     const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
     window.addEventListener("resize", resize);
     const waves = [
-      { amp: 28, freq: 0.007, speed: 0.011, y: 0.30, color: "rgba(130,195,185,0.13)" },
-      { amp: 20, freq: 0.010, speed: 0.008, y: 0.46, color: "rgba(105,180,200,0.10)" },
-      { amp: 16, freq: 0.013, speed: 0.015, y: 0.60, color: "rgba(148,205,182,0.09)" },
-      { amp: 24, freq: 0.006, speed: 0.006, y: 0.73, color: "rgba(90,172,198,0.08)" },
-      { amp: 12, freq: 0.017, speed: 0.020, y: 0.86, color: "rgba(128,202,187,0.07)" },
+      { amp: 28, freq: 0.007, speed: 0.003, y: 0.30, color: "rgba(130,195,185,0.13)" },
+      { amp: 20, freq: 0.010, speed: 0.002, y: 0.46, color: "rgba(105,180,200,0.10)" },
+      { amp: 16, freq: 0.013, speed: 0.004, y: 0.60, color: "rgba(148,205,182,0.09)" },
+      { amp: 24, freq: 0.006, speed: 0.0015, y: 0.73, color: "rgba(90,172,198,0.08)" },
+      { amp: 12, freq: 0.017, speed: 0.005, y: 0.86, color: "rgba(128,202,187,0.07)" },
     ];
     let t = 0, raf: number;
     const draw = () => {
-      ctx.clearRect(0, 0, W, H);
-      waves.forEach(w => {
-        ctx.beginPath(); ctx.moveTo(0, H);
-        for (let x = 0; x <= W; x += 2) ctx.lineTo(x, w.y * H + Math.sin(x * w.freq + t * w.speed * 60) * w.amp);
-        ctx.lineTo(W, H); ctx.closePath(); ctx.fillStyle = w.color; ctx.fill();
-      });
-      t++; raf = requestAnimationFrame(draw);
+      if (!pausedRef.current) {
+        ctx.clearRect(0, 0, W, H);
+        waves.forEach(w => {
+          ctx.beginPath(); ctx.moveTo(0, H);
+          for (let x = 0; x <= W; x += 2) ctx.lineTo(x, w.y * H + Math.sin(x * w.freq + t * w.speed * 60) * w.amp);
+          ctx.lineTo(W, H); ctx.closePath(); ctx.fillStyle = w.color; ctx.fill();
+        });
+        t++;
+      }
+      raf = requestAnimationFrame(draw);
     };
     draw();
     return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
@@ -89,49 +95,82 @@ function useWaveCanvas() {
 interface SwipeCardProps { listing: PropertyCard; onSwipe: (action: "like" | "dislike") => void; isTop: boolean; stackIndex: number; }
 
 function SwipeCard({ listing, onSwipe, isTop, stackIndex }: SwipeCardProps) {
-  const [drag, setDrag] = useState({ x: 0, y: 0, dragging: false, startX: 0, startY: 0 });
+  const cardRef = useRef<HTMLDivElement>(null);
+  const likeRef = useRef<HTMLDivElement>(null);
+  const nopeRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef({ dragging: false, startX: 0, startY: 0, dx: 0, dy: 0 });
   const [exiting, setExiting] = useState<"left" | "right" | null>(null);
   const match = matchScore(listing);
   const matchColor = match >= 88 ? "#6db8a0" : match >= 78 ? "#7ab3c8" : "#c4a882";
+
+  const yOff = isTop ? 0 : stackIndex === 1 ? 10 : 19;
+  const scale = isTop ? 1 : stackIndex === 1 ? 0.96 : 0.92;
+
+  const applyTransform = useCallback((dx: number, dy: number, dragging: boolean) => {
+    const el = cardRef.current;
+    if (!el) return;
+    const rot = dx * 0.04;
+    const ty = dy * 0.22;
+    el.style.transform = `translateX(${dx}px) translateY(${ty + yOff}px) rotate(${rot}deg) scale(${scale})`;
+    el.style.transition = dragging ? "none" : "transform 0.3s cubic-bezier(0.34,1.56,0.64,1)";
+    el.style.cursor = dragging ? "grabbing" : "grab";
+    if (likeRef.current) likeRef.current.style.opacity = String(Math.min(1, Math.max(0, dx / 70)));
+    if (nopeRef.current) nopeRef.current.style.opacity = String(Math.min(1, Math.max(0, -dx / 70)));
+  }, [yOff, scale]);
 
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
     if ("touches" in e) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
     return { x: e.clientX, y: e.clientY };
   };
-  const onStart = (e: React.MouseEvent | React.TouchEvent) => { if (!isTop) return; const p = getPos(e); setDrag({ x: 0, y: 0, dragging: true, startX: p.x, startY: p.y }); };
-  const onMove = (e: React.MouseEvent | React.TouchEvent) => { if (!drag.dragging) return; const p = getPos(e); setDrag(d => ({ ...d, x: p.x - d.startX, y: p.y - d.startY })); };
+  const onStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isTop) return;
+    const p = getPos(e);
+    dragState.current = { dragging: true, startX: p.x, startY: p.y, dx: 0, dy: 0 };
+  };
+  const onMove = (e: React.MouseEvent | React.TouchEvent) => {
+    const ds = dragState.current;
+    if (!ds.dragging) return;
+    const p = getPos(e);
+    ds.dx = p.x - ds.startX;
+    ds.dy = p.y - ds.startY;
+    applyTransform(ds.dx, ds.dy, true);
+  };
   const onEnd = () => {
-    if (!drag.dragging) return;
-    if (Math.abs(drag.x) > 80) { const dir = drag.x > 0 ? "right" as const : "left" as const; setExiting(dir); setTimeout(() => onSwipe(dir === "right" ? "like" : "dislike"), 340); }
-    else setDrag({ x: 0, y: 0, dragging: false, startX: 0, startY: 0 });
+    const ds = dragState.current;
+    if (!ds.dragging) return;
+    ds.dragging = false;
+    if (Math.abs(ds.dx) > 80) {
+      const dir = ds.dx > 0 ? "right" as const : "left" as const;
+      setExiting(dir);
+      setTimeout(() => onSwipe(dir === "right" ? "like" : "dislike"), 340);
+    } else {
+      applyTransform(0, 0, false);
+    }
   };
   const trigger = (dir: "left" | "right") => { setExiting(dir); setTimeout(() => onSwipe(dir === "right" ? "like" : "dislike"), 340); };
 
-  const rot = exiting ? (exiting === "right" ? 24 : -24) : drag.x * 0.04;
-  const tx = exiting ? (exiting === "right" ? 900 : -900) : drag.x;
-  const ty = exiting ? -50 : drag.y * 0.22;
-  const likeOp = Math.min(1, Math.max(0, drag.x > 0 ? drag.x / 70 : 0));
-  const nopeOp = Math.min(1, Math.max(0, drag.x < 0 ? -drag.x / 70 : 0));
-  const yOff = isTop ? 0 : stackIndex === 1 ? 10 : 19;
-  const scale = isTop ? 1 : stackIndex === 1 ? 0.96 : 0.92;
   const cardTags = tags(listing);
 
   return (
     <div
+      ref={cardRef}
       onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
       onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd}
       style={{
         position: "absolute", inset: 0,
-        transform: `translateX(${tx}px) translateY(${ty + yOff}px) rotate(${rot}deg) scale(${scale})`,
-        transition: drag.dragging ? "none" : exiting ? "transform 0.34s cubic-bezier(0.25,0.46,0.45,0.94)" : "transform 0.3s cubic-bezier(0.34,1.56,0.64,1)",
-        cursor: isTop ? (drag.dragging ? "grabbing" : "grab") : "default",
+        transform: exiting
+          ? `translateX(${exiting === "right" ? 900 : -900}px) translateY(${-50 + yOff}px) rotate(${exiting === "right" ? 24 : -24}deg) scale(${scale})`
+          : `translateY(${yOff}px) scale(${scale})`,
+        transition: exiting ? "transform 0.34s cubic-bezier(0.25,0.46,0.45,0.94)" : "transform 0.3s cubic-bezier(0.34,1.56,0.64,1)",
+        cursor: isTop ? "grab" : "default",
         zIndex: isTop ? 10 : stackIndex === 1 ? 9 : 8,
         userSelect: "none",
+        willChange: isTop ? "transform" : "auto",
       }}
     >
       <div style={{
         width: "100%", height: "100%", borderRadius: 20, overflow: "hidden",
-        background: "rgba(255,255,255,0.45)", backdropFilter: "blur(16px)",
+        background: "rgba(255,255,255,0.45)",
         boxShadow: isTop ? "0 16px 48px rgba(28,58,53,0.14)" : "0 5px 18px rgba(28,58,53,0.07)",
         display: "flex", flexDirection: "column",
       }}>
@@ -142,7 +181,7 @@ function SwipeCard({ listing, onSwipe, isTop, stackIndex }: SwipeCardProps) {
 
           <div style={{
             position: "absolute", top: 12, right: 12,
-            background: "rgba(20,45,40,0.5)", backdropFilter: "blur(10px)",
+            background: "rgba(20,45,40,0.5)",
             borderRadius: 14, padding: "4px 10px 4px 6px",
             display: "flex", alignItems: "center", gap: 6,
           }}>
@@ -153,10 +192,10 @@ function SwipeCard({ listing, onSwipe, isTop, stackIndex }: SwipeCardProps) {
             </div>
           </div>
 
-          <div style={{ position: "absolute", top: 18, left: 16, border: "2px solid #6db8a0", borderRadius: 6, padding: "2px 9px", transform: "rotate(-18deg)", opacity: likeOp, pointerEvents: "none" }}>
+          <div ref={likeRef} style={{ position: "absolute", top: 18, left: 16, border: "2px solid #6db8a0", borderRadius: 6, padding: "2px 9px", transform: "rotate(-18deg)", opacity: 0, pointerEvents: "none" }}>
             <span style={{ color: "#6db8a0", fontSize: 15, fontWeight: 800, letterSpacing: 2 }}>LIKE</span>
           </div>
-          <div style={{ position: "absolute", top: 18, right: 16, border: "2px solid #c4a882", borderRadius: 6, padding: "2px 9px", transform: "rotate(18deg)", opacity: nopeOp, pointerEvents: "none" }}>
+          <div ref={nopeRef} style={{ position: "absolute", top: 18, right: 16, border: "2px solid #c4a882", borderRadius: 6, padding: "2px 9px", transform: "rotate(18deg)", opacity: 0, pointerEvents: "none" }}>
             <span style={{ color: "#c4a882", fontSize: 15, fontWeight: 800, letterSpacing: 2 }}>NOPE</span>
           </div>
 
@@ -172,8 +211,8 @@ function SwipeCard({ listing, onSwipe, isTop, stackIndex }: SwipeCardProps) {
               {cardTags.map((tag, i) => (
                 <span key={i} style={{
                   fontSize: 10, fontWeight: 600, padding: "2px 9px", borderRadius: 20,
-                  background: "rgba(20,45,40,0.45)", color: tag.color,
-                  border: `1px solid ${tag.color}55`, backdropFilter: "blur(4px)",
+                  background: "rgba(20,45,40,0.55)", color: tag.color,
+                  border: `1px solid ${tag.color}55`,
                 }}>{tag.label}</span>
               ))}
             </div>
@@ -438,13 +477,13 @@ function InlineChat() {
 /* ── Main Dashboard ── */
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const canvasRef = useWaveCanvas();
   const [deck, setDeck] = useState(() => [...MOCK_PROPERTIES].reverse());
   const [liked, setLiked] = useState<PropertyCard[]>([]);
   const [surveyStep, setSurveyStep] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [fadeIn, setFadeIn] = useState(true);
   const [tab, setTab] = useState<"explore" | "saved" | "journey">("explore");
+  const canvasRef = useWaveCanvas(tab === "explore");
   const surveyDone = surveyStep >= SURVEY.length;
 
   const handleSwipe = (action: "like" | "dislike") => {
@@ -482,7 +521,7 @@ export default function DashboardPage() {
       `}</style>
 
       <div style={{ position: "fixed", inset: 0, zIndex: 0, background: "linear-gradient(155deg, #c0eae2 0%, #acdae8 38%, #c0e8d2 68%, #aadee8 100%)" }} />
-      <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none" }} />
+      <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none", opacity: tab === "explore" ? 0 : 1, transition: "opacity 0.6s ease" }} />
 
       <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", height: "100vh" }}>
 
