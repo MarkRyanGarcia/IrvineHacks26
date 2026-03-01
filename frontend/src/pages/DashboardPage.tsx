@@ -399,7 +399,7 @@ export default function DashboardPage() {
         .fade-out { animation: fadeOut 0.17s ease forwards; }
       `}</style>
 
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, background: "linear-gradient(160deg, #FF6200 0%, #e85500 60%, #cc4400 100%)" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, background: "linear-gradient(180deg, #C94A00 0%, #FF6200 40%, rgb(255, 158, 60) 100%)" }} />
       {/* FIX: wave visible on saved tab, hidden on explore */}
       <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none", opacity: tab === "saved" ? 1 : 0, transition: "opacity 0.6s ease" }} />
 
