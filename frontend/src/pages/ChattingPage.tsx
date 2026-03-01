@@ -187,12 +187,16 @@ export default function ChattingPage() {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const landingInputRef = useRef<HTMLTextAreaElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
+    const swipeSectionRef = useRef<HTMLDivElement>(null);
 
     const conversationStarted = messages.length > 0;
 
-    // Logic: Count only messages where role is "user"
+    // Only count user messages toward the trigger threshold.
     const userMessageCount = messages.filter(m => m.role === "user").length;
-    const showSwipeCard = userMessageCount >= 3;
+
+    // showSwipeCard is STATE — never a derived value — so it only flips after
+    // the assistant finishes replying to message #3 (not when the user sends it).
+    const [showSwipeCard, setShowSwipeCard] = useState(false);
 
     useEffect(() => {
         document.documentElement.classList.add(SCOPE_CLASS);
@@ -218,18 +222,29 @@ export default function ChattingPage() {
         }
     }, [conversationStarted]);
 
-    // Stop auto-scroll only after the assistant responds to the 3rd user message (6 messages total)
-    const stopAutoScroll = userMessageCount >= 3 && messages.length >= 6;
+    // Always auto-scroll to the latest message as it arrives.
     useEffect(() => {
-        if (!conversationStarted || stopAutoScroll) return;
-        if (userMessageCount === 3) {
+        if (!conversationStarted) return;
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages, loading, conversationStarted]);
+
+    // After the assistant finishes replying to msg #3, wait 3 s then reveal the
+    // swipe section and smoothly scroll to it.
+    useEffect(() => {
+        if (showSwipeCard) return;
+        const lastIsAssistant =
+            messages.length > 0 && messages[messages.length - 1].role === "assistant";
+        if (!loading && userMessageCount >= 3 && lastIsAssistant) {
             const timer = setTimeout(() => {
-                bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-            }, 5000);
+                setShowSwipeCard(true);
+                // Give React one tick to render the element before scrolling.
+                requestAnimationFrame(() => {
+                    swipeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+            }, 3000);
             return () => clearTimeout(timer);
         }
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, loading, conversationStarted, stopAutoScroll, userMessageCount]);
+    }, [messages, loading, userMessageCount, showSwipeCard]);
 
     const handleSend = async () => {
         if (!input.trim() || loading) return;
@@ -444,13 +459,15 @@ export default function ChattingPage() {
                         </div>
                     )}
 
-                    {showSwipeCard ? (
-                        <>
-                            {messages.slice(0, 6).map((msg, i) => (
-                                <div key={i} className={`message ${msg.role}`}>
-                                    {msg.content}
-                                </div>
-                            ))}
+                    {messages.map((msg, i) => (
+                        <div key={i} className={`message ${msg.role}`}>
+                            {msg.content}
+                        </div>
+                    ))}
+                    {loading && <div className="message assistant" style={{ opacity: 0.4 }}>Thinking...</div>}
+
+                    {showSwipeCard && (
+                        <div ref={swipeSectionRef}>
                             <div className="swipe-card-wrapper" style={{ animation: 'fade-in-up 0.8s ease forwards' }}>
                                 <SwipeCardPlaceholder
                                     propertiesLoading={propertiesLoading}
@@ -490,22 +507,7 @@ export default function ChattingPage() {
                                     See your recommendations
                                 </button>
                             </div>
-                            {messages.slice(6).map((msg, i) => (
-                                <div key={i + 6} className={`message ${msg.role}`}>
-                                    {msg.content}
-                                </div>
-                            ))}
-                            {loading && <div className="message assistant" style={{ opacity: 0.4 }}>Thinking...</div>}
-                        </>
-                    ) : (
-                        <>
-                            {messages.map((msg, i) => (
-                                <div key={i} className={`message ${msg.role}`}>
-                                    {msg.content}
-                                </div>
-                            ))}
-                            {loading && <div className="message assistant" style={{ opacity: 0.4 }}>Thinking...</div>}
-                        </>
+                        </div>
                     )}
                     <div ref={bottomRef} />
                 </main>
