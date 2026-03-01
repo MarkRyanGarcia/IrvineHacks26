@@ -281,11 +281,14 @@ export default function ChattingPage() {
             <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=Jost:wght@300;400&display=swap');
 
-        html.${SCOPE_CLASS}, body.${SCOPE_CLASS} { background: #FF6200 !important; margin: 0; padding: 0; }
+        html.${SCOPE_CLASS}, body.${SCOPE_CLASS} {
+          margin: 0; padding: 0;
+          background: linear-gradient(180deg, #8B2E00 0%, #FF6200 40%, #FFD4A3 100%) !important;
+        }
         
         .${SCOPE_CLASS} .page-root {
           min-height: 100vh;
-          background: #FF6200 !important;
+          background: linear-gradient(180deg, #8B2E00 0%, #FF6200 40%, #FFD4A3 100%) !important;
           position: relative;
           font-family: 'Jost', sans-serif;
           color: white;
@@ -299,7 +302,9 @@ export default function ChattingPage() {
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
         .${SCOPE_CLASS} .sun-overlay {
-          position: fixed; inset: 0; background: #FF6200; z-index: 1; pointer-events: none;
+          position: fixed; inset: 0;
+          background: linear-gradient(180deg, #C94A00 0%, #FF6200 40%,rgb(255, 158, 60) 100%);
+          z-index: 1; pointer-events: none;
           clip-path: circle(48px at 50% 50%);
           animation: sun-rise 1.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
         }
