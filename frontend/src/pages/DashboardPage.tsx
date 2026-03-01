@@ -658,7 +658,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
-                {saved.length > 0 ? saved.map(p => {
+                {saved.length > 0 ? saved.filter(item => item.liked === true).map(p => {
                   const localMatch = liked.find(l => l.address === p.address);
                   return (
                     <div key={p.id} style={{ background: "rgba(255,255,255,0.5)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(28,58,53,0.08)" }}>
