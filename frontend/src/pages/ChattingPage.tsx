@@ -190,7 +190,7 @@ export default function ChattingPage() {
 
     // Logic: Count only messages where role is "user"
     const userMessageCount = messages.filter(m => m.role === "user").length;
-    const showSwipeCard = userMessageCount >= 5;
+    const showSwipeCard = userMessageCount >= 3;
 
     useEffect(() => {
         document.documentElement.classList.add(SCOPE_CLASS);
@@ -296,8 +296,8 @@ export default function ChattingPage() {
           padding: 60px 0 280px; /* Top padding; bottom padding clears input area with gap */
           display: flex;
           flex-direction: column;
-          justify-content: flex-start;
-          align-items: flex-start;
+          justify-content: flex-center;
+          align-items: flex-center;
           gap: 48px;
         }
 
