@@ -21,3 +21,8 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
+    properties = relationship(
+        "Properties",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
