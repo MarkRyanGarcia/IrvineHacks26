@@ -204,88 +204,233 @@ function SwipeCard({ listing, onSwipe, isTop, stackIndex }: SwipeCardProps) {
   );
 }
 
-/* ── Chat Panel ── */
-function ChatPanel({ onClose }: { onClose: () => void }) {
+/* ── Inline Chat Widget — idle / inline / fullscreen ── */
+type ChatMode = "idle" | "inline" | "fullscreen";
+
+function InlineChat() {
+  const [mode, setMode] = useState<ChatMode>("idle");
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: "Hi! Ask me anything about a home, the buying process, or your finances." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
 
-  const send = useCallback(async () => {
-    const text = input.trim();
+  const send = useCallback(async (prefill?: string) => {
+    const text = (prefill || input).trim();
     if (!text || loading) return;
     const userMsg: ChatMessage = { role: "user", content: text };
     const updated = [...messages, userMsg];
     setMessages(updated);
     setInput("");
     setLoading(true);
+    if (mode === "idle") setMode("inline");
     try {
       const resp = await sendChat({ messages: updated.slice(-10) });
       setMessages(prev => [...prev, { role: "assistant", content: resp.reply }]);
     } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I had trouble responding. Please try again." }]);
+      setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I had trouble responding. Try again." }]);
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages]);
+  }, [input, loading, messages, mode]);
 
-  return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 100,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      background: "rgba(15,35,30,0.5)", backdropFilter: "blur(6px)",
-    }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{
-        width: 420, height: 560, borderRadius: 22, overflow: "hidden",
-        background: "rgba(255,255,255,0.92)", backdropFilter: "blur(20px)",
-        boxShadow: "0 24px 64px rgba(28,58,53,0.2)",
-        display: "flex", flexDirection: "column",
+  const hasMessages = messages.length > 1;
+
+  const chatContent = (isFullscreen: boolean) => (
+    <>
+      {/* Header */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: isFullscreen ? "16px 24px" : "10px 14px",
+        borderBottom: "1px solid rgba(200,230,222,0.1)", flexShrink: 0,
       }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid rgba(42,74,66,0.08)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#6db8a0" }} />
-            <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: "#2a4a42", fontWeight: 500 }}>realease AI</span>
-          </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, color: "#2a4a42", cursor: "pointer", opacity: 0.4 }}>✕</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#6db8a0", boxShadow: "0 0 6px rgba(109,184,160,0.6)" }} />
+          <span style={{ fontFamily: "'Playfair Display',serif", fontSize: isFullscreen ? 18 : 13, color: "rgba(220,240,235,0.9)", fontWeight: 500 }}>realease AI</span>
         </div>
-
-        <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {messages.map((msg, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
-              <div style={{
-                maxWidth: "80%", padding: "10px 14px", borderRadius: 16,
-                fontSize: 13, lineHeight: 1.55, color: "#2a4a42",
-                background: msg.role === "user" ? "rgba(42,74,66,0.1)" : "rgba(109,184,160,0.12)",
-                borderBottomRightRadius: msg.role === "user" ? 4 : 16,
-                borderBottomLeftRadius: msg.role === "assistant" ? 4 : 16,
-              }}>
-                {msg.content}
-              </div>
-            </div>
-          ))}
-          {loading && (
-            <div style={{ display: "flex", justifyContent: "flex-start" }}>
-              <div style={{ padding: "10px 14px", borderRadius: 16, fontSize: 13, color: "rgba(42,74,66,0.5)", background: "rgba(109,184,160,0.08)" }}>Thinking...</div>
-            </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {mode === "inline" && (
+            <button onClick={() => setMode("fullscreen")} title="Expand" style={{
+              background: "rgba(200,230,222,0.08)", border: "1px solid rgba(200,230,222,0.12)",
+              borderRadius: 6, width: 24, height: 24, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "rgba(200,230,222,0.5)", fontSize: 11,
+            }}>⤢</button>
           )}
-          <div ref={bottomRef} />
+          {mode === "fullscreen" && (
+            <button onClick={() => setMode("inline")} title="Minimize" style={{
+              background: "rgba(200,230,222,0.08)", border: "1px solid rgba(200,230,222,0.12)",
+              borderRadius: 6, width: 28, height: 28, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "rgba(200,230,222,0.5)", fontSize: 13,
+            }}>⤡</button>
+          )}
+          {hasMessages && (
+            <button onClick={() => { setMode("idle"); setMessages([messages[0]]); }} title="Close" style={{
+              background: "rgba(200,230,222,0.08)", border: "1px solid rgba(200,230,222,0.12)",
+              borderRadius: 6, width: isFullscreen ? 28 : 24, height: isFullscreen ? 28 : 24, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "rgba(200,230,222,0.4)", fontSize: isFullscreen ? 14 : 11,
+            }}>✕</button>
+          )}
         </div>
+      </div>
 
-        <form onSubmit={e => { e.preventDefault(); send(); }} style={{ display: "flex", gap: 8, padding: "12px 16px", borderTop: "1px solid rgba(42,74,66,0.08)" }}>
-          <input value={input} onChange={e => setInput(e.target.value)} placeholder="Ask anything..."
-            style={{ flex: 1, background: "rgba(42,74,66,0.06)", border: "none", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#2a4a42", outline: "none", fontFamily: "inherit" }} />
-          <button type="submit" disabled={!input.trim() || loading} style={{
-            width: 36, height: 36, borderRadius: 10, border: "none",
-            background: input.trim() ? "rgba(42,74,66,0.8)" : "rgba(42,74,66,0.15)",
-            color: "white", fontSize: 14, cursor: input.trim() ? "pointer" : "default",
+      {/* Messages */}
+      <div style={{
+        flex: 1, overflowY: "auto", padding: isFullscreen ? "20px 28px" : "10px 12px",
+        display: "flex", flexDirection: "column", gap: isFullscreen ? 12 : 8,
+        scrollbarWidth: "none",
+      }}>
+        {messages.map((msg, i) => (
+          <div key={i} style={{
+            display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+            animation: i === messages.length - 1 ? "fadeUp 0.25s ease" : undefined,
+          }}>
+            <div style={{
+              maxWidth: isFullscreen ? "65%" : "88%",
+              padding: isFullscreen ? "12px 16px" : "8px 11px",
+              borderRadius: 14, fontSize: isFullscreen ? 14 : 12, lineHeight: 1.55,
+              color: msg.role === "user" ? "rgba(220,240,235,0.95)" : "rgba(220,240,235,0.8)",
+              background: msg.role === "user" ? "rgba(109,184,160,0.2)" : "rgba(200,230,222,0.06)",
+              border: msg.role === "user" ? "1px solid rgba(109,184,160,0.15)" : "1px solid rgba(200,230,222,0.06)",
+              borderBottomRightRadius: msg.role === "user" ? 4 : 14,
+              borderBottomLeftRadius: msg.role === "assistant" ? 4 : 14,
+            }}>
+              {msg.content}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: "flex", justifyContent: "flex-start", animation: "fadeUp 0.2s ease" }}>
+            <div style={{
+              padding: isFullscreen ? "12px 16px" : "8px 11px", borderRadius: 14,
+              fontSize: isFullscreen ? 14 : 12, color: "rgba(200,230,222,0.4)",
+              background: "rgba(200,230,222,0.06)", border: "1px solid rgba(200,230,222,0.06)",
+              display: "flex", alignItems: "center", gap: 6,
+            }}>
+              <span style={{ display: "inline-block", animation: "pulse 1.2s ease infinite" }}>●</span>
+              <span style={{ display: "inline-block", animation: "pulse 1.2s ease 0.2s infinite" }}>●</span>
+              <span style={{ display: "inline-block", animation: "pulse 1.2s ease 0.4s infinite" }}>●</span>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <form onSubmit={e => { e.preventDefault(); send(); }} style={{
+        display: "flex", gap: 6,
+        padding: isFullscreen ? "14px 24px 18px" : "8px 12px 10px",
+        borderTop: "1px solid rgba(200,230,222,0.08)", flexShrink: 0,
+      }}>
+        <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
+          placeholder="Ask anything..."
+          style={{
+            flex: 1, background: "rgba(200,230,222,0.06)", border: "1px solid rgba(200,230,222,0.1)",
+            borderRadius: 10, padding: isFullscreen ? "11px 14px" : "8px 11px",
+            fontSize: isFullscreen ? 14 : 12, color: "rgba(220,240,235,0.9)",
+            outline: "none", fontFamily: "inherit",
+          }}
+          onFocus={() => { if (mode === "idle") setMode("inline"); }}
+        />
+        <button type="submit" disabled={!input.trim() || loading} style={{
+          width: isFullscreen ? 40 : 32, height: isFullscreen ? 40 : 32,
+          borderRadius: 10, border: "none", flexShrink: 0,
+          background: input.trim() ? "rgba(109,184,160,0.6)" : "rgba(200,230,222,0.08)",
+          color: input.trim() ? "white" : "rgba(200,230,222,0.3)",
+          fontSize: isFullscreen ? 16 : 13, cursor: input.trim() ? "pointer" : "default",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "all 0.15s",
+        }}>→</button>
+      </form>
+    </>
+  );
+
+  /* ── Fullscreen overlay ── */
+  if (mode === "fullscreen") {
+    return (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 100,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(15,35,30,0.6)", backdropFilter: "blur(10px)",
+      }} onClick={() => setMode("inline")}>
+        <div onClick={e => e.stopPropagation()} style={{
+          width: "min(600px, 90vw)", height: "min(700px, 85vh)",
+          borderRadius: 24, overflow: "hidden",
+          background: "rgba(32,62,56,0.95)", backdropFilter: "blur(30px)",
+          boxShadow: "0 32px 80px rgba(15,35,30,0.4), 0 0 0 1px rgba(200,230,222,0.08)",
+          display: "flex", flexDirection: "column",
+        }}>
+          {chatContent(true)}
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Idle CTA state ── */
+  if (mode === "idle") {
+    return (
+      <div style={{
+        background: "rgba(38,72,64,0.76)", backdropFilter: "blur(20px)",
+        borderRadius: 18, padding: 0, display: "flex", flexDirection: "column", flex: 1,
+        boxShadow: "0 6px 28px rgba(42,74,66,0.13)", minHeight: 0, overflow: "hidden",
+      }}>
+        <div style={{ padding: "20px 18px 0", flex: 1, display: "flex", flexDirection: "column" }}>
+          <div style={{ fontSize: 20, marginBottom: 10 }}>🧠</div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 400, color: "rgba(220,240,235,0.95)", lineHeight: 1.25, marginBottom: 8 }}>
+            How can<br />I help?
+          </div>
+          <p style={{ fontSize: 12, color: "rgba(200,230,222,0.45)", lineHeight: 1.6, marginBottom: "auto" }}>
+            Ask anything about a home, the process, or finances.
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, margin: "12px 0 10px" }}>
+            {["Good buy?", "What's next?", "Explain risks"].map(p => (
+              <button key={p} onClick={() => send(p)} style={{
+                background: "rgba(200,230,222,0.07)", border: "1px solid rgba(200,230,222,0.14)",
+                borderRadius: 18, padding: "4px 10px", fontSize: 10, color: "rgba(200,230,222,0.5)",
+                cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+              }}>{p}</button>
+            ))}
+          </div>
+        </div>
+        <form onSubmit={e => { e.preventDefault(); send(); }} style={{
+          display: "flex", gap: 6, padding: "10px 14px 12px",
+          borderTop: "1px solid rgba(200,230,222,0.08)",
+        }}>
+          <input value={input} onChange={e => setInput(e.target.value)}
+            placeholder="Start a conversation..."
+            style={{
+              flex: 1, background: "rgba(200,230,222,0.06)", border: "1px solid rgba(200,230,222,0.1)",
+              borderRadius: 10, padding: "8px 11px", fontSize: 12,
+              color: "rgba(220,240,235,0.9)", outline: "none", fontFamily: "inherit",
+            }}
+            onFocus={() => setMode("inline")}
+          />
+          <button type="submit" disabled={!input.trim()} style={{
+            width: 32, height: 32, borderRadius: 10, border: "none", flexShrink: 0,
+            background: input.trim() ? "rgba(109,184,160,0.6)" : "rgba(200,230,222,0.08)",
+            color: input.trim() ? "white" : "rgba(200,230,222,0.3)",
+            fontSize: 13, cursor: input.trim() ? "pointer" : "default",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>→</button>
         </form>
       </div>
+    );
+  }
+
+  /* ── Inline active chat ── */
+  return (
+    <div style={{
+      background: "rgba(38,72,64,0.82)", backdropFilter: "blur(20px)",
+      borderRadius: 18, display: "flex", flexDirection: "column", flex: 1,
+      boxShadow: "0 6px 28px rgba(42,74,66,0.13)", minHeight: 0, overflow: "hidden",
+    }}>
+      {chatContent(false)}
     </div>
   );
 }
@@ -299,7 +444,6 @@ export default function DashboardPage() {
   const [surveyStep, setSurveyStep] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [fadeIn, setFadeIn] = useState(true);
-  const [chatOpen, setChatOpen] = useState(false);
   const [tab, setTab] = useState<"explore" | "saved" | "journey">("explore");
   const surveyDone = surveyStep >= SURVEY.length;
 
@@ -332,6 +476,7 @@ export default function DashboardPage() {
         .opt-btn:hover { background: rgba(28,58,53,0.11) !important; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
         @keyframes fadeOut { to { opacity:0; transform:translateY(-6px); } }
+        @keyframes pulse { 0%,100% { opacity:0.3; } 50% { opacity:1; } }
         .fade-up { animation: fadeUp 0.26s ease forwards; }
         .fade-out { animation: fadeOut 0.17s ease forwards; }
       `}</style>
@@ -434,33 +579,8 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Chat CTA */}
-              <button className="chat-btn" onClick={() => setChatOpen(true)} style={{
-                background: "rgba(38,72,64,0.76)", backdropFilter: "blur(20px)",
-                border: "none", borderRadius: 18, padding: "22px 20px",
-                textAlign: "left" as const, display: "flex", flexDirection: "column" as const, flex: 1,
-                boxShadow: "0 6px 28px rgba(42,74,66,0.13)", minHeight: 0,
-              }}>
-                <div style={{ fontSize: 20, marginBottom: 12 }}>🧠</div>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 400, color: "rgba(220,240,235,0.95)", lineHeight: 1.25, marginBottom: 10 }}>
-                  How can<br />I help?
-                </div>
-                <p style={{ fontSize: 13, color: "rgba(200,230,222,0.5)", lineHeight: 1.65, marginBottom: "auto" }}>
-                  Ask anything about a home, the process, or finances.
-                </p>
-                <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, margin: "16px 0 13px" }}>
-                  {["Good buy?", "What's next?", "Explain risks"].map(p => (
-                    <span key={p} style={{
-                      background: "rgba(200,230,222,0.09)", border: "1px solid rgba(200,230,222,0.16)",
-                      borderRadius: 20, padding: "4px 10px", fontSize: 11, color: "rgba(200,230,222,0.48)",
-                    }}>{p}</span>
-                  ))}
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 13, borderTop: "1px solid rgba(200,230,222,0.12)", width: "100%" }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(200,230,222,0.62)" }}>Start a conversation</span>
-                  <span className="arrow" style={{ color: "rgba(200,230,222,0.44)", fontSize: 16 }}>→</span>
-                </div>
-              </button>
+              {/* Inline Chat */}
+              <InlineChat />
             </div>
           </div>
         )}
@@ -509,7 +629,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
     </div>
   );
 }
