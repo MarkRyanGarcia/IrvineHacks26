@@ -18,6 +18,8 @@ ZHVI_CSV_PATH = os.getenv(
     os.path.join(os.path.dirname(__file__), "..", "..", "data", "data.csv"),
 )
 
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
+
 MC_NUM_SIMULATIONS = int(os.getenv("MC_NUM_SIMULATIONS", "1000"))
 
 HF_TOKEN = os.getenv("HF_TOKEN", "")
