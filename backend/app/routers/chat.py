@@ -85,11 +85,15 @@ def chat_endpoint(
             for p in rows
         ]
 
+    user_msg_count = sum(1 for m in req.messages if m.role == "user")
+    prefer_statement = req.prefer_statement or (user_msg_count == 3)
+
     try:
         reply = chat(
             messages=[m.model_dump() for m in req.messages],
             analysis_context=req.analysis_context,
             liked_properties=liked_properties,
+            prefer_statement=prefer_statement,
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Chat error: {e}")

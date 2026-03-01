@@ -92,12 +92,15 @@ def chat(
     messages: list[dict[str, str]],
     analysis_context: dict | None = None,
     liked_properties: list[dict] | None = None,
+    prefer_statement: bool = False,
 ) -> str:
     system = (
         SYSTEM_PROMPT
         + build_context_prompt(analysis_context)
         + build_liked_properties_prompt(liked_properties or [])
     )
+    if prefer_statement:
+        system += "\n\nThe user is about to see property cards. End with a brief, reassuring statement — do not ask a question."
 
     formatted: list[dict[str, str]] = [{"role": "system", "content": system}]
     for msg in messages:

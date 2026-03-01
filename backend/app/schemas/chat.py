@@ -12,6 +12,7 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage]
     analysis_context: dict | None = None
     user_id: str | None = None
+    prefer_statement: bool = False  # When true, respond with a statement (not a question) — e.g. before showing swipe cards
 
 
 class ChatResponse(BaseModel):
