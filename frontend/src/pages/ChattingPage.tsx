@@ -1,10 +1,15 @@
 import { useState, useRef, useEffect } from "react";
-import { fetchBulkAppreciation, fetchSavedProperties, saveProperty, sendChat } from "../api";
+import { deleteSavedProperty, fetchBulkAppreciation, fetchSavedProperties, saveProperty, sendChat } from "../api";
 import Navbar from "../components/Navbar";
 import { useUser } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
 import { fetchProperties } from "../data/properties";
 import type { PropertyCard, SavedProperty } from "../types";
+import { SURVEY } from "../data/dashboardData";
+import { useWaveCanvas } from "./DashboardPage";
 import SwipeCard from "../components/SwipeCard";
+// Import your SwipeCard component here
+// import SwipeCard from "../components/SwipeCard"; 
 
 const SCOPE_CLASS = "chatting-page-isolated";
 
@@ -13,10 +18,8 @@ type Message = {
     content: string;
 };
 
-/**
- * SwipeCardPlaceholder
- * Handles the logic for displaying the stack of property cards.
- */
+// Placeholder SwipeCard for demonstration 
+// Replace this with your actual SwipeCard component logic
 function SwipeCardPlaceholder({
     propertiesLoading,
     properties,
@@ -29,20 +32,22 @@ function SwipeCardPlaceholder({
     propertiesLoading: boolean;
     properties: PropertyCard[];
     deck: PropertyCard[];
-    setDeck: React.Dispatch<React.SetStateAction<PropertyCard[]>>;
+    setDeck: any;
     handleSwipe: (action: "like" | "dislike") => void;
     appreciation: Record<string, number | null>;
     setLiked: React.Dispatch<React.SetStateAction<PropertyCard[]>>;
 }) {
+    const navigate = useNavigate();
+
     return (
         <div
             style={{
                 width: "100%",
-                maxWidth: "420px",
-                height: "600px",
+                maxWidth: "420px", // Slightly wider for swipe room
+                height: "600px",    // Increased height to accommodate card + action buttons
                 margin: "40px auto",
                 position: "relative",
-                zIndex: 50,
+                zIndex: 50,         // Ensure it sits above background blobs
             }}
         >
             {propertiesLoading ? (
@@ -65,20 +70,17 @@ function SwipeCardPlaceholder({
                     <p style={{ fontFamily: 'Fraunces', fontSize: 24, color: "white", marginBottom: 8 }}>All caught up</p>
                     <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 20 }}>Review matches or start fresh.</p>
                     <div style={{ display: "flex", gap: 12 }}>
-                        <button
-                            onClick={() => {
-                                setDeck([...properties].reverse());
-                                setLiked([]);
-                            }}
-                            style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 20, padding: "10px 20px", color: "white", cursor: "pointer" }}
-                        >
+                        <button onClick={() => { setDeck([...properties].reverse()); setLiked([]); }}
+                            style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 20, padding: "10px 20px", color: "white", cursor: "pointer" }}>
                             Reset
                         </button>
                     </div>
                 </div>
             ) : (
+                /* This is the stack container. It MUST be relative and full height */
                 <div style={{ position: "relative", width: "100%", height: "100%" }}>
                     {deck.slice(-3).map((listing, i) => {
+                        // Correct stack index calculation
                         const stackIndex = Math.min(deck.length, 3) - 1 - i;
                         return (
                             <SwipeCard
@@ -101,26 +103,20 @@ export default function ChattingPage() {
     const { user } = useUser();
     const userId = user?.id ?? "";
 
-    // -- Property & Deck State --
     const [properties, setProperties] = useState<PropertyCard[]>([]);
     const [propertiesLoading, setPropertiesLoading] = useState(true);
     const [deck, setDeck] = useState<PropertyCard[]>([]);
     const [liked, setLiked] = useState<PropertyCard[]>([]);
     const [saved, setSaved] = useState<SavedProperty[]>([]);
+    const [surveyStep, setSurveyStep] = useState(0);
+    const [selected, setSelected] = useState<string | null>(null);
+    const [fadeIn, setFadeIn] = useState(true);
+    const [tab, setTab] = useState<"explore" | "saved">("explore");
     const [appreciation, setAppreciation] = useState<Record<string, number | null>>({});
+    const canvasRef = useWaveCanvas(tab === "explore");
+    const surveyDone = surveyStep >= SURVEY.length;
 
-    // -- UI State --
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [input, setInput] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [isFocused, setIsFocused] = useState(false);
-    // const [tab, setTab] = useState<"explore" | "saved">("explore");
-
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const bottomRef = useRef<HTMLDivElement>(null);
-    const conversationStarted = messages.length > 0;
-
-    // Load Properties on Mount
+    // Load live properties
     useEffect(() => {
         fetchProperties()
             .then((props) => {
@@ -129,89 +125,118 @@ export default function ChattingPage() {
             })
             .catch(console.error)
             .finally(() => setPropertiesLoading(false));
-        console.log(liked);
     }, []);
 
-    // Load Saved Properties
     useEffect(() => {
         if (userId) fetchSavedProperties(userId).then(setSaved).catch(() => { });
     }, [userId]);
 
-    // Fetch Appreciation Data
     useEffect(() => {
         const propertyZips = properties.map(p => p.zip_code).filter(Boolean) as string[];
         const savedZips = saved.map(p => p.zip_code).filter(Boolean) as string[];
         const allZips = [...new Set([...propertyZips, ...savedZips])];
         if (allZips.length > 0) {
-            fetchBulkAppreciation(allZips)
-                .then(r => setAppreciation(prev => ({ ...prev, ...r.results })))
-                .catch(() => { });
+            fetchBulkAppreciation(allZips).then(r => setAppreciation(prev => ({ ...prev, ...r.results }))).catch(() => { });
         }
     }, [saved, properties]);
 
-    // Handle Swiping Logic
-    const handleSwipe = async (action: "like" | "dislike") => {
+    const handleSwipe = (action: "like" | "dislike") => {
         const top = deck[deck.length - 1];
-        if (!top || !userId) return;
-
-        const payload = {
-            // Data from your payload
-            user_id: userId,
-            liked: action === "like",
-            zpid: top.zpid ? parseInt(top.zpid.toString()) : undefined,
-            street_address: top.street_address || undefined,
-            city: top.city || undefined,
-            state: top.state || undefined,
-            zip_code: top.zip_code || undefined,
-            latitude: top.latitude || undefined,
-            longitude: top.longitude || undefined,
-            price: top.price || undefined,
-            price_per_sqft: top.price_per_sqft || undefined,
-            property_type: top.property_type || undefined,
-            beds: top.beds || undefined,
-            baths: top.baths || undefined,
-            sqft: top.sqft || undefined,
-            photo_url: top.image || undefined,
-
-            // MISSING FIELDS: Your backend likely requires these to be explicitly null 
-            // if the DB columns are not set to default values.
-            price_change: undefined,
-            price_changed_date: undefined,
-            listing_status: "active",
-            days_on_zillow: undefined,
-            listing_date: undefined,
-            lot_size: undefined,
-            lot_size_unit: undefined,
-            year_built: undefined,
-            is_new_construction: false,
-            zestimate: undefined,
-            rent_zestimate: undefined,
-            tax_assessed_value: undefined,
-            tax_assessment_year: undefined,
-            has_vr_model: false,
-            has_videos: false,
-            has_floor_plan: false,
-            is_showcase_listing: false,
-            open_house_start: undefined,
-            open_house_end: undefined,
-            broker_name: undefined
-        };
-
-        // Optimistically update UI
-        setDeck(prev => prev.slice(0, -1));
-
-        try {
-            await saveProperty(payload);
-        } catch (err) {
-            console.error("Save failed. Check if your DB columns allow NULL values.");
+        if (top) {
+            if (action === "like") setLiked(l => [...l, top]);
+            if (userId) {
+                saveProperty({
+                    user_id: userId,
+                    liked: action === "like",
+                    zpid: top.zpid,
+                    street_address: top.street_address,
+                    city: top.city,
+                    state: top.state,
+                    zip_code: top.zip_code,
+                    latitude: top.latitude,
+                    longitude: top.longitude,
+                    price: top.price,
+                    price_per_sqft: top.price_per_sqft,
+                    price_change: top.price_change,
+                    price_changed_date: top.price_changed_date,
+                    listing_status: top.listing_status,
+                    days_on_zillow: top.days_on_zillow,
+                    listing_date: top.listing_date,
+                    property_type: top.property_type,
+                    beds: top.beds,
+                    baths: top.baths,
+                    sqft: top.sqft,
+                    lot_size: top.lot_size,
+                    lot_size_unit: top.lot_size_unit,
+                    year_built: top.year_built,
+                    is_new_construction: top.is_new_construction,
+                    zestimate: top.zestimate,
+                    rent_zestimate: top.rent_zestimate,
+                    tax_assessed_value: top.tax_assessed_value,
+                    tax_assessment_year: top.tax_assessment_year,
+                    has_vr_model: top.has_vr_model,
+                    has_videos: top.has_videos,
+                    has_floor_plan: top.has_floor_plan,
+                    is_showcase_listing: top.is_showcase_listing,
+                    open_house_start: top.open_house_start,
+                    open_house_end: top.open_house_end,
+                    broker_name: top.broker_name,
+                    photo_url: top.image,
+                }).then(s => setSaved(prev => [...prev, s])).catch(() => { });
+            }
         }
+        setDeck(d => d.slice(0, -1));
+    };
+
+    const handleRemoveSaved = (id: number) => {
+        deleteSavedProperty(id).then(() => setSaved(prev => prev.filter(p => p.id !== id))).catch(() => { });
+    };
+
+    const handleAnswer = (opt: string) => {
+        setSelected(opt);
+        setTimeout(() => {
+            setFadeIn(false);
+            setTimeout(() => { setSurveyStep(s => s + 1); setSelected(null); setFadeIn(true); }, 200);
+        }, 340);
     };
 
 
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [input, setInput] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
 
-    // Chat Logic
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const bottomRef = useRef<HTMLDivElement>(null);
+
+    const conversationStarted = messages.length > 0;
+
+    // Logic: Count only messages where role is "user"
     const userMessageCount = messages.filter(m => m.role === "user").length;
     const showSwipeCard = userMessageCount >= 5;
+
+    useEffect(() => {
+        document.documentElement.classList.add(SCOPE_CLASS);
+        document.body.classList.add(SCOPE_CLASS);
+        textareaRef.current?.focus();
+        return () => {
+            document.documentElement.classList.remove(SCOPE_CLASS);
+            document.body.classList.remove(SCOPE_CLASS);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = "auto";
+            textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+        }
+    }, [input]);
+
+    useEffect(() => {
+        if (conversationStarted) {
+            bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [messages, loading]);
 
     const handleSend = async () => {
         if (!input.trim() || loading) return;
@@ -243,119 +268,95 @@ export default function ChattingPage() {
         }
     }
 
-    // Auto-focus and scroll management
-    useEffect(() => {
-        document.documentElement.classList.add(SCOPE_CLASS);
-        document.body.classList.add(SCOPE_CLASS);
-        textareaRef.current?.focus();
-        return () => {
-            document.documentElement.classList.remove(SCOPE_CLASS);
-            document.body.classList.remove(SCOPE_CLASS);
-        };
-    }, []);
-
-    useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = "auto";
-            textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
-        }
-    }, [input]);
-
-    useEffect(() => {
-        if (conversationStarted) {
-            bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-        }
-    }, [messages, loading]);
-
     return (
         <>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=Jost:wght@300;400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=Jost:wght@300;400&display=swap');
 
-                html.${SCOPE_CLASS}, body.${SCOPE_CLASS} { background: #FF6200 !important; margin: 0; padding: 0; }
-                
-                .${SCOPE_CLASS} .page-root {
-                  min-height: 100vh;
-                  background: #FF6200 !important;
-                  position: relative;
-                  font-family: 'Jost', sans-serif;
-                  color: white;
-                  overflow-x: hidden;
-                }
+        html.${SCOPE_CLASS}, body.${SCOPE_CLASS} { background: #FF6200 !important; margin: 0; padding: 0; }
+        
+        .${SCOPE_CLASS} .page-root {
+          min-height: 100vh;
+          background: #FF6200 !important;
+          position: relative;
+          font-family: 'Jost', sans-serif;
+          color: white;
+          overflow-x: hidden;
+        }
 
-                @keyframes drift-a { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px, -20px) scale(1.05); } 100% { transform: translate(-10px, 15px) scale(0.98); } }
-                @keyframes sun-rise { 0% { clip-path: circle(48px at 50% 50%); } 100% { clip-path: circle(150vmax at 50% 50%); } }
-                @keyframes face-fade { 0%, 30% { opacity: 1; } 60%, 100% { opacity: 0; } }
-                @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes drift-a { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px, -20px) scale(1.05); } 100% { transform: translate(-10px, 15px) scale(0.98); } }
+        @keyframes sun-rise { 0% { clip-path: circle(48px at 50% 50%); } 100% { clip-path: circle(150vmax at 50% 50%); } }
+        @keyframes face-fade { 0%, 30% { opacity: 1; } 60%, 100% { opacity: 0; } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-                .${SCOPE_CLASS} .sun-overlay {
-                  position: fixed; inset: 0; background: #FF6200; z-index: 1; pointer-events: none;
-                  clip-path: circle(48px at 50% 50%);
-                  animation: sun-rise 1.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
-                }
-                .${SCOPE_CLASS} .sun-face {
-                  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                  width: 96px; height: 96px; z-index: 2; pointer-events: none;
-                  animation: face-fade 1.8s ease 0.3s forwards;
-                }
+        .${SCOPE_CLASS} .sun-overlay {
+          position: fixed; inset: 0; background: #FF6200; z-index: 1; pointer-events: none;
+          clip-path: circle(48px at 50% 50%);
+          animation: sun-rise 1.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
+        }
+        .${SCOPE_CLASS} .sun-face {
+          position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+          width: 96px; height: 96px; z-index: 2; pointer-events: none;
+          animation: face-fade 1.8s ease 0.3s forwards;
+        }
 
-                .${SCOPE_CLASS} .bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-                .${SCOPE_CLASS} .blob-a { animation: drift-a 18s ease-in-out infinite; }
+        .${SCOPE_CLASS} .bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+        .${SCOPE_CLASS} .blob-a { animation: drift-a 18s ease-in-out infinite; }
 
-                .${SCOPE_CLASS} .chat-container {
-                  position: relative; z-index: 10;
-                  width: min(900px, 90vw);
-                  margin: 0 auto;
-                  padding: 120px 0 250px;
-                  display: flex;
-                  flex-direction: column;
-                  gap: 60px;
-                }
+        .${SCOPE_CLASS} .chat-container {
+          position: relative; z-index: 10;
+          width: min(900px, 90vw);
+          margin: 0 auto;
+          padding: 120px 0 250px; /* Increased bottom padding for input area */
+          display: flex;
+          flex-direction: column;
+          gap: 60px;
+        }
 
-                .${SCOPE_CLASS} .message {
-                  font-family: 'Fraunces', serif;
-                  font-size: clamp(24px, 4vw, 42px);
-                  line-height: 1.2;
-                  font-weight: 300;
-                  animation: fade-in-up 0.5s ease forwards;
-                }
-                @keyframes fade-in-up {
-                  from { opacity: 0; transform: translateY(20px); }
-                  to { opacity: 1; transform: translateY(0); }
-                }
+        .${SCOPE_CLASS} .message {
+          font-family: 'Fraunces', serif;
+          font-size: clamp(24px, 4vw, 42px);
+          line-height: 1.2;
+          font-weight: 300;
+          animation: fade-in-up 0.5s ease forwards;
+        }
+        @keyframes fade-in-up {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
 
-                .${SCOPE_CLASS} .assistant { opacity: 0.8; font-style: italic; color: rgba(255,255,255,0.85); }
+        .${SCOPE_CLASS} .assistant { opacity: 0.8; font-style: italic; color: rgba(255,255,255,0.85); }
 
-                .${SCOPE_CLASS} .input-fixed-wrapper {
-                  position: fixed;
-                  bottom: 0; left: 0; width: 100%;
-                  padding: 40px 0;
-                  background: linear-gradient(transparent, #FF6200 40%);
-                  z-index: 20;
-                  display: flex;
-                  justify-content: center;
-                }
+        .${SCOPE_CLASS} .input-fixed-wrapper {
+          position: fixed;
+          bottom: 0; left: 0; width: 100%;
+          padding: 40px 0;
+          background: linear-gradient(transparent, #FF6200 40%);
+          z-index: 20;
+          display: flex;
+          justify-content: center;
+        }
 
-                .${SCOPE_CLASS} .input-box {
-                  width: min(800px, 84vw);
-                  border-bottom: 1px solid rgba(255,255,255,0.4);
-                  display: flex;
-                  align-items: flex-start;
-                  position: relative;
-                }
+        .${SCOPE_CLASS} .input-box {
+          width: min(800px, 84vw);
+          border-bottom: 1px solid rgba(255,255,255,0.4);
+          display: flex;
+          align-items: flex-start;
+          position: relative;
+        }
 
-                .${SCOPE_CLASS} .input-textarea {
-                  width: 100%; background: transparent; border: none; outline: none;
-                  resize: none; font-family: 'Jost', sans-serif; font-size: 1.2rem;
-                  color: white; padding: 10px 0; caret-color: white;
-                }
+        .${SCOPE_CLASS} .input-textarea {
+          width: 100%; background: transparent; border: none; outline: none;
+          resize: none; font-family: 'Jost', sans-serif; font-size: 1.2rem;
+          color: white; padding: 10px 0; caret-color: white;
+        }
 
-                .${SCOPE_CLASS} .cursor-line {
-                  display: inline-block; width: 2px; height: 1.4rem;
-                  background: #fff; animation: blink 1.05s step-start infinite;
-                  position: absolute; left: 0; top: 12px; pointer-events: none;
-                }
-            `}</style>
+        .${SCOPE_CLASS} .cursor-line {
+          display: inline-block; width: 2px; height: 1.4rem;
+          background: #fff; animation: blink 1.05s step-start infinite;
+          position: absolute; left: 0; top: 12px; pointer-events: none;
+        }
+      `}</style>
 
             <div className="page-root">
                 <div className="sun-overlay" />
@@ -390,7 +391,7 @@ export default function ChattingPage() {
                         </div>
                     ))}
 
-                    {/* Logic: Only show SwipeCard after 5 user messages */}
+                    {/* Conditional Rendering of SwipeCard */}
                     {showSwipeCard && (
                         <div className="swipe-card-wrapper" style={{ animation: 'fade-in-up 0.8s ease forwards' }}>
                             <SwipeCardPlaceholder
