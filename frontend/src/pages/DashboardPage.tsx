@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserButton, useUser } from "@clerk/clerk-react";
 import { fetchProperties } from "../data/properties";
 import type { PropertyCard, SavedProperty, ChatMessage } from "../types";
 import { sendChat, saveProperty, fetchSavedProperties, deleteSavedProperty, fetchBulkAppreciation } from "../api";
-import SwipeCard from "../components/SwipeCard";
-import { SURVEY, fmtPrice, filterByBedrooms, filterByBudget, buildFitProfile, computeFitScore } from "../data/dashboardData";
+import { SURVEY, fmtPrice, buildFitProfile, computeFitScore } from "../data/dashboardData";
 import type { FitProfile } from "../data/dashboardData";
 
 export { MatchArc } from "../components/MatchArc";
@@ -278,6 +277,50 @@ function InlineChat({ userId }: { userId?: string }) {
   );
 }
 
+/* ── ListingRow — compact recommendation list item ── */
+function ListingRow({ property, fitScore, isSelected, onClick }: {
+  property: PropertyCard;
+  fitScore: number;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const fitColor = fitScore >= 88 ? "#FFE4B5" : fitScore >= 78 ? "#FFD4A3" : "#FFBF80";
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
+        borderRadius: 12, cursor: "pointer", flexShrink: 0,
+        background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.07)",
+        border: isSelected ? "1px solid rgba(255,255,255,0.32)" : "1px solid rgba(255,255,255,0.08)",
+        transition: "background 0.12s, border-color 0.12s",
+      }}
+    >
+      <img
+        src={property.image ?? property.photo_url ?? ""}
+        alt=""
+        draggable={false}
+        style={{ width: 54, height: 50, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontFamily: "'Fraunces',serif", fontStyle: "italic", fontSize: 13, color: "#fff", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
+          {property.street_address}
+        </p>
+        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", margin: "2px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {property.city} · {property.beds}bd {property.baths}ba · {(property.sqft ?? 0).toLocaleString()}
+        </p>
+        <p style={{ fontSize: 11, fontFamily: "'Fraunces',serif", fontStyle: "italic", color: "rgba(255,255,255,0.85)", margin: "3px 0 0" }}>
+          {fmtPrice(property.price ?? 0)}
+        </p>
+      </div>
+      <div style={{ flexShrink: 0, background: "rgba(255,255,255,0.12)", borderRadius: 8, padding: "3px 8px", textAlign: "center", border: "1px solid rgba(255,255,255,0.15)" }}>
+        <p style={{ fontSize: 9, color: "rgba(255,255,255,0.55)", letterSpacing: 0.5, textTransform: "uppercase", margin: 0, fontFamily: "'Jost',sans-serif" }}>AI fit</p>
+        <p style={{ fontSize: 13, fontWeight: 700, color: fitColor, margin: "1px 0 0", fontFamily: "'Jost',sans-serif" }}>{fitScore}%</p>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Dashboard ── */
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -286,22 +329,18 @@ export default function DashboardPage() {
 
   const [properties, setProperties] = useState<PropertyCard[]>([]);
   const [propertiesLoading, setPropertiesLoading] = useState(true);
-  const [deck, setDeck] = useState<PropertyCard[]>([]);
   const [liked, setLiked] = useState<PropertyCard[]>([]);
   const [saved, setSaved] = useState<SavedProperty[]>([]);
   const [surveyStep, setSurveyStep] = useState(0);
-  const [surveyAnswers, setSurveyAnswers] = useState<(string | null)[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [fadeIn, setFadeIn] = useState(true);
-  const [tab, setTab] = useState<"explore" | "saved">("explore");
+  const [tab, setTab] = useState<"recommendations" | "saved">("recommendations");
   const [appreciation, setAppreciation] = useState<Record<string, number | null>>({});
   // Stable fit profile — computed once from initial likes (empty → defaults); never re-sorted mid-session.
   const [fitProfile] = useState<FitProfile>(() => buildFitProfile([]));
-  const canvasRef = useWaveCanvas(tab === "explore");
+  const [selectedListing, setSelectedListing] = useState<PropertyCard | null>(null);
+  const canvasRef = useWaveCanvas(tab === "recommendations");
   const surveyDone = surveyStep >= SURVEY.length;
-
-  const bedroomPref = surveyAnswers[0] ?? null;
-  const budgetPref = surveyAnswers[2] ?? null;
 
   useEffect(() => {
     fetchProperties()
@@ -310,13 +349,20 @@ export default function DashboardPage() {
       .finally(() => setPropertiesLoading(false));
   }, []);
 
+  // Top-20 recommendations sorted descending by fit score.
+  const recoList = useMemo(() =>
+    [...properties]
+      .sort((a, b) => computeFitScore(b, fitProfile) - computeFitScore(a, fitProfile))
+      .slice(0, 20),
+    [properties, fitProfile]
+  );
+
+  // Auto-select the top recommendation when the list first loads.
   useEffect(() => {
-    if (properties.length === 0) return;
-    let filtered = filterByBedrooms(properties, bedroomPref);
-    filtered = filterByBudget(filtered, budgetPref);
-    // Sort ascending by fit score so the highest-fit card sits at deck[deck.length-1] (top of stack).
-    setDeck([...filtered].sort((a, b) => computeFitScore(a, fitProfile) - computeFitScore(b, fitProfile)));
-  }, [bedroomPref, budgetPref, properties, fitProfile]);
+    if (recoList.length > 0 && !selectedListing) {
+      setSelectedListing(recoList[0]);
+    }
+  }, [recoList]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (userId) fetchSavedProperties(userId).then(setSaved).catch(() => { });
@@ -331,54 +377,6 @@ export default function DashboardPage() {
     }
   }, [saved, properties]);
 
-  const handleSwipe = (action: "like" | "dislike") => {
-    const top = deck[deck.length - 1];
-    if (top) {
-      if (action === "like") setLiked(l => [...l, top]);
-      if (userId) {
-        saveProperty({
-          user_id: userId,
-          liked: action === "like",
-          zpid: top.zpid,
-          street_address: top.street_address,
-          city: top.city,
-          state: top.state,
-          zip_code: top.zip_code,
-          latitude: top.latitude,
-          longitude: top.longitude,
-          price: top.price,
-          price_per_sqft: top.price_per_sqft,
-          price_change: top.price_change,
-          price_changed_date: top.price_changed_date,
-          listing_status: top.listing_status,
-          days_on_zillow: top.days_on_zillow,
-          listing_date: top.listing_date,
-          property_type: top.property_type,
-          beds: top.beds,
-          baths: top.baths,
-          sqft: top.sqft,
-          lot_size: top.lot_size,
-          lot_size_unit: top.lot_size_unit,
-          year_built: top.year_built,
-          is_new_construction: top.is_new_construction,
-          zestimate: top.zestimate,
-          rent_zestimate: top.rent_zestimate,
-          tax_assessed_value: top.tax_assessed_value,
-          tax_assessment_year: top.tax_assessment_year,
-          has_vr_model: top.has_vr_model,
-          has_videos: top.has_videos,
-          has_floor_plan: top.has_floor_plan,
-          is_showcase_listing: top.is_showcase_listing,
-          open_house_start: top.open_house_start,
-          open_house_end: top.open_house_end,
-          broker_name: top.broker_name,
-          photo_url: top.image,
-        }).then(s => setSaved(prev => [...prev, s])).catch(() => { });
-      }
-    }
-    setDeck(d => d.slice(0, -1));
-  };
-
   const handleRemoveSaved = (id: number) => {
     const removed = saved.find(p => p.id === id);
     deleteSavedProperty(id).then(() => {
@@ -389,11 +387,6 @@ export default function DashboardPage() {
 
   const handleAnswer = (opt: string) => {
     setSelected(opt);
-    setSurveyAnswers(prev => {
-      const next = [...prev];
-      next[surveyStep] = opt;
-      return next;
-    });
     setTimeout(() => {
       setFadeIn(false);
       setTimeout(() => { setSurveyStep(s => s + 1); setSelected(null); setFadeIn(true); }, 200);
@@ -428,7 +421,7 @@ export default function DashboardPage() {
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 48px", flexShrink: 0 }}>
           <span style={{ fontFamily: "'Fraunces', serif", fontSize: 24, letterSpacing: 0.5, color: "#fff" }}>realease</span>
           <nav style={{ display: "flex", gap: 36 }}>
-            {(["explore", "saved"] as const).map((n) => (
+            {(["recommendations", "saved"] as const).map((n) => (
               <span key={n} onClick={() => setTab(n)} style={{
                 fontSize: 14, cursor: "pointer", textTransform: "capitalize",
                 color: tab === n ? "#fff" : "rgba(255,255,255,0.45)",
@@ -452,62 +445,131 @@ export default function DashboardPage() {
         </header>
 
         {/* Tab Content */}
-        {tab === "explore" && (
+        {tab === "recommendations" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 256px", gap: 24, padding: "4px 48px 32px", flex: 1, minHeight: 0 }}>
-            {/* Left — swipe */}
+            {/* Left — recommendations split panel */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
+              {/* Sub-header */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", letterSpacing: 1.6, textTransform: "uppercase", fontWeight: 600 }}>BEST MATCHES · {deck.length} REMAINING</p>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>drag or tap ✕ / ♥</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", letterSpacing: 1.6, textTransform: "uppercase", fontWeight: 600 }}>
+                  RECOMMENDATIONS · {recoList.length} HOMES
+                </p>
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>sorted by AI fit</p>
               </div>
-              <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
-                {propertiesLoading ? (
-                  <div style={{
-                    position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                    background: "rgba(255,255,255,0.1)", backdropFilter: "blur(14px)", borderRadius: 20,
-                  }}>
-                    <p style={{ fontFamily: "'Fraunces',serif", fontStyle: "italic", fontSize: 18, color: "rgba(255,255,255,0.7)" }}>Loading properties…</p>
-                  </div>
-                ) : deck.length === 0 ? (
-                  <div style={{
-                    position: "absolute", inset: 0, display: "flex", flexDirection: "column",
-                    alignItems: "center", justifyContent: "center",
-                    background: "rgba(255,255,255,0.1)", backdropFilter: "blur(14px)", borderRadius: 20,
-                  }}>
-                    <div style={{ fontSize: 34, marginBottom: 12 }}>🌊</div>
-                    <p style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 22, color: "#fff", marginBottom: 8 }}>All caught up</p>
-                    <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 20 }}>You've reviewed all your matches.</p>
-                    <div style={{ display: "flex", gap: 12 }}>
-                      <button onClick={() => { let filtered = filterByBedrooms(properties, bedroomPref); filtered = filterByBudget(filtered, budgetPref); setDeck([...filtered].reverse()); setLiked([]); }} style={{
-                        background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)",
-                        borderRadius: 20, padding: "8px 22px", fontSize: 13, color: "#fff", cursor: "pointer", fontFamily: "inherit",
-                      }}>Start over</button>
-                      <button onClick={() => navigate("/analyze")} style={{
-                        background: "rgba(255,255,255,0.9)", border: "none",
-                        borderRadius: 20, padding: "8px 22px", fontSize: 13, color: "#FF6200", cursor: "pointer", fontFamily: "inherit",
-                      }}>Analyze a home →</button>
+
+              {/* Split: list (left) + preview (right) */}
+              <div style={{ display: "flex", gap: 14, flex: 1, minHeight: 0 }}>
+
+                {/* Scrollable list */}
+                <div style={{
+                  width: 280, flexShrink: 0, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6,
+                  paddingRight: 4, scrollbarWidth: "thin",
+                  scrollbarColor: "rgba(255,255,255,0.2) transparent",
+                }}>
+                  {propertiesLoading ? (
+                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.6 }}>
+                      <p style={{ fontFamily: "'Fraunces',serif", fontStyle: "italic", fontSize: 15, color: "#fff" }}>Loading…</p>
                     </div>
-                  </div>
-                ) : (
-                  deck.slice(-3).map((listing, i) => {
-                    const stackIndex = Math.min(deck.length, 3) - 1 - i;
-                    return (
-                      <SwipeCard
-                        key={listing.zpid ?? i}
-                        listing={listing}
-                        onSwipe={handleSwipe}
-                        isTop={stackIndex === 0}
-                        stackIndex={stackIndex}
-                        appreciationPct={appreciation[listing.zip_code ?? ""] ?? null}
-                        fitScore={computeFitScore(listing, fitProfile)}
+                  ) : recoList.map((p) => (
+                    <ListingRow
+                      key={p.zpid ?? p.street_address}
+                      property={p}
+                      fitScore={computeFitScore(p, fitProfile)}
+                      isSelected={selectedListing?.zpid === p.zpid && selectedListing?.street_address === p.street_address}
+                      onClick={() => setSelectedListing(p)}
+                    />
+                  ))}
+                </div>
+
+                {/* Full-size preview */}
+                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                  {selectedListing ? (
+                    <div style={{ width: "100%", height: "100%", borderRadius: 20, overflow: "hidden", position: "relative" }}>
+                      {/* Full-bleed photo */}
+                      <img
+                        src={selectedListing.image ?? selectedListing.photo_url ?? ""}
+                        alt={selectedListing.street_address}
+                        draggable={false}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                       />
-                    );
-                  })
-                )}
+                      {/* Gradient overlay */}
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.75) 75%, rgba(0,0,0,0.92) 100%)" }} />
+                      {/* AI fit badge top-right */}
+                      <div style={{
+                        position: "absolute", top: 14, right: 14,
+                        background: "rgba(255,255,255,0.18)", backdropFilter: "blur(14px)",
+                        borderRadius: 14, padding: "5px 12px 5px 8px",
+                        display: "flex", alignItems: "center", gap: 7,
+                        border: "1px solid rgba(255,255,255,0.25)",
+                      }}>
+                        <svg width={38} height={38} viewBox="0 0 38 38">
+                          {(() => {
+                            const pct = computeFitScore(selectedListing, fitProfile);
+                            const r = 16, stroke = 3, circ = 2 * Math.PI * r;
+                            const color = pct >= 88 ? "#FFE4B5" : pct >= 78 ? "#FFD4A3" : "#FFBF80";
+                            return <>
+                              <circle cx={19} cy={19} r={r} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={stroke} />
+                              <circle cx={19} cy={19} r={r} fill="none" stroke={color} strokeWidth={stroke}
+                                strokeDasharray={`${circ * pct / 100} ${circ}`} strokeLinecap="round"
+                                style={{ transform: "rotate(-90deg)", transformOrigin: "19px 19px" }} />
+                              <text x={19} y={23} textAnchor="middle" fill="white" fontSize={9} fontWeight={700} fontFamily="'Jost',sans-serif">{pct}%</text>
+                            </>;
+                          })()}
+                        </svg>
+                        <div>
+                          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.65)", letterSpacing: 1, textTransform: "uppercase", fontWeight: 600, fontFamily: "'Jost',sans-serif" }}>AI Match</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, fontFamily: "'Jost',sans-serif", color: (() => { const p = computeFitScore(selectedListing, fitProfile); return p >= 88 ? "#FFE4B5" : p >= 78 ? "#FFD4A3" : "#FFBF80"; })() }}>
+                            {computeFitScore(selectedListing, fitProfile)}% fit
+                          </div>
+                        </div>
+                      </div>
+                      {/* Bottom info overlay */}
+                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "14px 18px 16px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
+                          <div>
+                            <h2 style={{ fontFamily: "'Fraunces',serif", fontStyle: "italic", fontSize: 22, fontWeight: 300, color: "#fff", lineHeight: 1.2, margin: 0 }}>
+                              {selectedListing.street_address}
+                            </h2>
+                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", margin: "4px 0 0", fontFamily: "'Jost',sans-serif", fontWeight: 300 }}>
+                              {selectedListing.city} · {selectedListing.beds}bd {selectedListing.baths}ba · {(selectedListing.sqft ?? 0).toLocaleString()} sqft
+                            </p>
+                          </div>
+                          <span style={{ fontFamily: "'Fraunces',serif", fontStyle: "italic", fontSize: 22, fontWeight: 300, color: "#fff", whiteSpace: "nowrap", paddingLeft: 12 }}>
+                            {fmtPrice(selectedListing.price ?? 0)}
+                          </span>
+                        </div>
+                        {appreciation[selectedListing.zip_code ?? ""] != null && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: (appreciation[selectedListing.zip_code ?? ""] ?? 0) >= 0 ? "#FFE4B5" : "#FFB899", fontFamily: "'Jost',sans-serif" }}>
+                              {(appreciation[selectedListing.zip_code ?? ""] ?? 0) >= 0 ? "▲" : "▼"} {Math.abs((appreciation[selectedListing.zip_code ?? ""] ?? 0) * 100).toFixed(1)}%
+                            </span>
+                            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontFamily: "'Jost',sans-serif" }}>predicted 12-mo value change</span>
+                          </div>
+                        )}
+                        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                          <button
+                            onClick={() => navigate("/analyze", { state: { prefill: { zip: selectedListing.zip_code, current_price: selectedListing.price, offer_price: selectedListing.price } } })}
+                            style={{ background: "rgba(255,255,255,0.9)", border: "none", borderRadius: 10, padding: "7px 16px", fontSize: 12, color: "#FF6200", cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}
+                          >Analyze →</button>
+                          <button
+                            onClick={() => {
+                              if (userId) saveProperty({ user_id: userId, liked: true, zpid: selectedListing.zpid, street_address: selectedListing.street_address, city: selectedListing.city, state: selectedListing.state, zip_code: selectedListing.zip_code, latitude: selectedListing.latitude, longitude: selectedListing.longitude, price: selectedListing.price, price_per_sqft: selectedListing.price_per_sqft, price_change: selectedListing.price_change, price_changed_date: selectedListing.price_changed_date, listing_status: selectedListing.listing_status, days_on_zillow: selectedListing.days_on_zillow, listing_date: selectedListing.listing_date, property_type: selectedListing.property_type, beds: selectedListing.beds, baths: selectedListing.baths, sqft: selectedListing.sqft, lot_size: selectedListing.lot_size, lot_size_unit: selectedListing.lot_size_unit, year_built: selectedListing.year_built, is_new_construction: selectedListing.is_new_construction, zestimate: selectedListing.zestimate, rent_zestimate: selectedListing.rent_zestimate, tax_assessed_value: selectedListing.tax_assessed_value, tax_assessment_year: selectedListing.tax_assessment_year, has_vr_model: selectedListing.has_vr_model, has_videos: selectedListing.has_videos, has_floor_plan: selectedListing.has_floor_plan, is_showcase_listing: selectedListing.is_showcase_listing, open_house_start: selectedListing.open_house_start, open_house_end: selectedListing.open_house_end, broker_name: selectedListing.broker_name, photo_url: selectedListing.image }).then(s => setSaved(prev => [...prev, s])).catch(() => { });
+                            }}
+                            style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "7px 16px", fontSize: 12, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}
+                          >♥ Save</button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%", background: "rgba(255,255,255,0.08)", borderRadius: 20, border: "1px solid rgba(255,255,255,0.12)" }}>
+                      <p style={{ fontFamily: "'Fraunces',serif", fontStyle: "italic", fontSize: 16, color: "rgba(255,255,255,0.45)" }}>Select a home to preview</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Right — widgets */}
+            {/* Right — widgets (unchanged) */}
             <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
               <div style={{
                 background: "rgba(255,255,255,0.12)", backdropFilter: "blur(16px)",
