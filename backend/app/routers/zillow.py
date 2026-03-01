@@ -13,7 +13,7 @@ router = APIRouter(tags=["zillow"])
 
 @router.get("/zillow/search")
 def search_zillow_properties(
-    location: str = Query(..., description="City, state or ZIP"),
+    location: str = Query(..., description="City, state or ZIP", optional=True),
     listing_status: str = Query("For_Sale"),
     page: int = Query(1),
 ):
@@ -27,7 +27,7 @@ def search_zillow_properties(
     params = {
         "location": location or "Irvine, CA",
         "listingStatus": listing_status or "For_Sale",
-        "page": page or 1,
+        "page": page or q1,
     }
 
     response = requests.get(url, headers=headers, params=params)
