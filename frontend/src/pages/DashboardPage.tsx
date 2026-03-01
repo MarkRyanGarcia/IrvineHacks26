@@ -490,7 +490,7 @@ export default function DashboardPage() {
   const [surveyStep, setSurveyStep] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [fadeIn, setFadeIn] = useState(true);
-  const [tab, setTab] = useState<"explore" | "saved" | "journey">("explore");
+  const [tab, setTab] = useState<"explore" | "saved">("explore");
   const [appreciation, setAppreciation] = useState<Record<string, number | null>>({});
   const canvasRef = useWaveCanvas(tab === "explore");
   const surveyDone = surveyStep >= SURVEY.length;
@@ -571,7 +571,7 @@ export default function DashboardPage() {
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 48px", flexShrink: 0 }}>
           <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, letterSpacing: 0.5, color: "#2a4a42" }}>realease</span>
           <nav style={{ display: "flex", gap: 36 }}>
-            {(["explore", "saved", "journey"] as const).map((n) => (
+            {(["explore", "saved"] as const).map((n) => (
               <span key={n} onClick={() => setTab(n)} style={{
                 fontSize: 14, cursor: "pointer", textTransform: "capitalize",
                 color: tab === n ? "#2a4a42" : "rgba(42,74,66,0.38)",
@@ -745,19 +745,6 @@ export default function DashboardPage() {
                 })}
               </div>
             )}
-          </div>
-        )}
-
-        {tab === "journey" && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-            <p style={{ fontFamily: "'Playfair Display',serif", fontSize: 24, color: "#2a4a42" }}>Your Journey</p>
-            <p style={{ fontSize: 14, color: "rgba(42,74,66,0.5)", maxWidth: 400, textAlign: "center", lineHeight: 1.6 }}>
-              Run a deep analysis on any home to understand your confidence level, projected value, and risk.
-            </p>
-            <button onClick={() => navigate("/analyze")} style={{
-              background: "rgba(42,74,66,0.8)", border: "none", borderRadius: 20, padding: "10px 28px",
-              fontSize: 14, color: "white", cursor: "pointer", fontFamily: "inherit", fontWeight: 500, marginTop: 8,
-            }}>Analyze a Home →</button>
           </div>
         )}
       </div>
