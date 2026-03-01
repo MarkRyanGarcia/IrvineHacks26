@@ -332,7 +332,7 @@ export default function AnalyzePage() {
                 Running simulations...
               </>
             ) : (
-              <>🔍 Analyze</>
+              <>Analyze</>
             )}
           </button>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
