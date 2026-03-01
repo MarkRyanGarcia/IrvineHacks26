@@ -425,9 +425,8 @@ function InlineChat() {
         boxShadow: "0 6px 28px rgba(42,74,66,0.13)", minHeight: 0, overflow: "hidden",
       }}>
         <div style={{ padding: "20px 18px 0", flex: 1, display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 20, marginBottom: 10 }}>🔎</div>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 400, color: "rgba(220,240,235,0.95)", lineHeight: 1.25, marginBottom: 8 }}>
-            How can<br />I help?
+            How can I help?
           </div>
           <p style={{ fontSize: 12, color: "rgba(200,230,222,0.45)", lineHeight: 1.6, marginBottom: "auto" }}>
             Tell me what you need clarity on…
