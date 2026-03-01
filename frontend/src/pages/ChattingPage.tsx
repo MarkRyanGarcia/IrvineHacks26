@@ -183,6 +183,7 @@ export default function ChattingPage() {
     const [isFocused, setIsFocused] = useState(false);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const landingInputRef = useRef<HTMLTextAreaElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
     const conversationStarted = messages.length > 0;
@@ -202,11 +203,18 @@ export default function ChattingPage() {
     }, []);
 
     useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = "auto";
-            textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+        const ref = conversationStarted ? textareaRef : landingInputRef;
+        if (ref.current) {
+            ref.current.style.height = "auto";
+            ref.current.style.height = ref.current.scrollHeight + "px";
         }
-    }, [input]);
+    }, [input, conversationStarted]);
+
+    useEffect(() => {
+        if (conversationStarted) {
+            textareaRef.current?.focus();
+        }
+    }, [conversationStarted]);
 
     useEffect(() => {
         if (conversationStarted) {
@@ -305,19 +313,53 @@ export default function ChattingPage() {
 
         .${SCOPE_CLASS} .assistant { opacity: 0.8; font-style: italic; color: rgba(255,255,255,0.85); }
 
+        /* ── Landing hero layout ── */
+        .${SCOPE_CLASS} .landing-hero {
+          position: fixed;
+          inset: 0;
+          z-index: 10;
+          pointer-events: none;
+          overflow: hidden;
+        }
+        .${SCOPE_CLASS} .hero-text {
+          position: absolute;
+          top: 18vh;
+          left: 14vw;
+          font-family: 'Fraunces', serif;
+          font-size: clamp(4.2rem, 6.5vw, 8rem);
+          font-weight: 300;
+          font-style: italic;
+          line-height: 1.15;
+          color: white;
+          margin: 0;
+        }
+        .${SCOPE_CLASS} .house-img {
+          position: absolute;
+          right: 6vw;
+          top: 18vh;
+          width: clamp(340px, 44vw, 580px);
+          max-width: 46vw; /* prevents overlap on narrow screens */
+        }
+
+        @keyframes reveal-after-sun {
+          to { opacity: 1; pointer-events: auto; }
+        }
+
         .${SCOPE_CLASS} .input-fixed-wrapper {
           position: fixed;
           bottom: 0; left: 0; width: 100%;
-          padding: 40px 0;
+          padding: 40px 0 40px 8vw;
           background: linear-gradient(transparent, #FF6200 40%);
           z-index: 20;
           display: flex;
-          justify-content: center;
+          justify-content: flex-start;
+          opacity: 0;
+          pointer-events: none;
+          animation: reveal-after-sun 0.35s ease 2.1s forwards;
         }
 
         .${SCOPE_CLASS} .input-box {
           width: min(800px, 84vw);
-          border-bottom: 1px solid rgba(255,255,255,0.4);
           display: flex;
           align-items: flex-start;
           position: relative;
@@ -333,6 +375,34 @@ export default function ChattingPage() {
           display: inline-block; width: 2px; height: 1.4rem;
           background: #fff; animation: blink 1.05s step-start infinite;
           position: absolute; left: 0; top: 12px; pointer-events: none;
+        }
+
+        /* ── Landing-only input (big, positioned below headline) ── */
+        .${SCOPE_CLASS} .landing-input-wrapper {
+          position: fixed;
+          top: 50vh;
+          left: 14vw;
+          width: min(660px, 72vw);
+          z-index: 20;
+          opacity: 0;
+          pointer-events: none;
+          animation: reveal-after-sun 0.35s ease 2.1s forwards;
+        }
+        .${SCOPE_CLASS} .landing-input-box {
+          width: 100%;
+          display: flex;
+          align-items: flex-start;
+          position: relative;
+        }
+        .${SCOPE_CLASS} .landing-input-textarea {
+          width: 100%; background: transparent; border: none; outline: none;
+          resize: none; font-family: 'Jost', sans-serif; font-size: 1.85rem;
+          color: white; padding: 8px 0; caret-color: white; line-height: 1.3;
+        }
+        .${SCOPE_CLASS} .landing-cursor-line {
+          display: inline-block; width: 3px; height: 2.1rem;
+          background: #fff; animation: blink 1.05s step-start infinite;
+          position: absolute; left: 0; top: 10px; pointer-events: none;
         }
       `}</style>
 
@@ -354,13 +424,13 @@ export default function ChattingPage() {
 
                 <main className="chat-container">
                     {!conversationStarted && (
-                        <h1 style={{
-                            fontFamily: 'Fraunces', fontSize: 'clamp(3rem, 5vw, 5.5rem)',
-                            fontWeight: 300, fontStyle: 'italic', textAlign: 'center',
-                            marginTop: '10vh'
-                        }}>
-                            I'm Realease. <br /><em>what's on your mind?</em>
-                        </h1>
+                        <div className="landing-hero">
+                            <h1 className="hero-text">
+                                Let's Talk homes.<br />
+                                what's on your mind?
+                            </h1>
+                            <img src="/house.png" alt="" className="house-img" />
+                        </div>
                     )}
 
                     {messages.map((msg, i) => (
@@ -388,23 +458,46 @@ export default function ChattingPage() {
                     <div ref={bottomRef} />
                 </main>
 
-                <div className="input-fixed-wrapper">
-                    <div className="input-box" onClick={() => textareaRef.current?.focus()}>
-                        {(input.length === 0 && !isFocused) && <span className="cursor-line" />}
-                        <textarea
-                            ref={textareaRef}
-                            className="input-textarea"
-                            value={input}
-                            rows={1}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            onFocus={() => setIsFocused(true)}
-                            onBlur={() => setIsFocused(false)}
-                            placeholder=""
-                            spellCheck={false}
-                        />
+                {!conversationStarted && (
+                    <div className="landing-input-wrapper">
+                        <div className="landing-input-box" onClick={() => landingInputRef.current?.focus()}>
+                            {(input.length === 0 && !isFocused) && <span className="landing-cursor-line" />}
+                            <textarea
+                                ref={landingInputRef}
+                                className="landing-input-textarea"
+                                value={input}
+                                rows={1}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onFocus={() => setIsFocused(true)}
+                                onBlur={() => setIsFocused(false)}
+                                placeholder=""
+                                spellCheck={false}
+                                autoFocus
+                            />
+                        </div>
                     </div>
-                </div>
+                )}
+
+                {conversationStarted && (
+                    <div className="input-fixed-wrapper">
+                        <div className="input-box" onClick={() => textareaRef.current?.focus()}>
+                            {(input.length === 0 && !isFocused) && <span className="cursor-line" />}
+                            <textarea
+                                ref={textareaRef}
+                                className="input-textarea"
+                                value={input}
+                                rows={1}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onFocus={() => setIsFocused(true)}
+                                onBlur={() => setIsFocused(false)}
+                                placeholder=""
+                                spellCheck={false}
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );
