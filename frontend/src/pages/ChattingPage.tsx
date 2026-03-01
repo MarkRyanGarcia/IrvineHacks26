@@ -249,19 +249,15 @@ export default function ChattingPage() {
             <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=Jost:wght@300;400&display=swap');
 
-        html.${SCOPE_CLASS}, body.${SCOPE_CLASS} { background: #FF6200 !important; margin: 0; padding: 0; }
+        html.${SCOPE_CLASS}, body.${SCOPE_CLASS} { background: #FDF6EE !important; margin: 0; padding: 0; }
         
         .${SCOPE_CLASS} .page-root {
-          min-height: 100vh;
-          background: #FF6200 !important;
-          position: relative;
           font-family: 'Jost', sans-serif;
           color: white;
-          overflow-x: hidden;
         }
 
         @keyframes drift-a { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px, -20px) scale(1.05); } 100% { transform: translate(-10px, 15px) scale(0.98); } }
-        @keyframes sun-rise { 0% { clip-path: circle(48px at 50% 50%); } 100% { clip-path: circle(150vmax at 50% 50%); } }
+        @keyframes sun-rise { 0% { clip-path: circle(48px at 50% 50%); } 60% { clip-path: circle(80vmax at 50% 50%); } 100% { clip-path: circle(150vmax at 50% 50%); } }
         @keyframes face-fade { 0%, 30% { opacity: 1; } 60%, 100% { opacity: 0; } }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
@@ -303,6 +299,10 @@ export default function ChattingPage() {
 
         .${SCOPE_CLASS} .assistant { opacity: 0.8; font-style: italic; color: rgba(255,255,255,0.85); }
 
+        @keyframes reveal-after-sun {
+          to { opacity: 1; pointer-events: auto; }
+        }
+
         .${SCOPE_CLASS} .input-fixed-wrapper {
           position: fixed;
           bottom: 0; left: 0; width: 100%;
@@ -311,6 +311,9 @@ export default function ChattingPage() {
           z-index: 20;
           display: flex;
           justify-content: center;
+          opacity: 0;
+          pointer-events: none;
+          animation: reveal-after-sun 0.35s ease 2.1s forwards;
         }
 
         .${SCOPE_CLASS} .input-box {
@@ -334,7 +337,7 @@ export default function ChattingPage() {
         }
       `}</style>
 
-            <div className="page-root">
+            <div className="page-root" style={{ position: "fixed", inset: 0, background: "#FDF6EE", overflowY: "auto", zIndex: 9999 }}>
                 <div className="sun-overlay" />
                 <svg className="sun-face" viewBox="0 0 96 96" fill="none">
                     <path d="M33 40 Q36 36 39 40" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" />
