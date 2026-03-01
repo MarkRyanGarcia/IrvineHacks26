@@ -424,7 +424,7 @@ function InlineChat() {
             How can<br />I help?
           </div>
           <p style={{ fontSize: 12, color: "rgba(200,230,222,0.45)", lineHeight: 1.6, marginBottom: "auto" }}>
-            Tell me what you need clarity on…”
+            Tell me what you need clarity on…
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 5, margin: "12px 0 10px" }}>
             {["Good buy?", "What's next?", "Explain risks"].map(p => (
