@@ -14,7 +14,7 @@ export default function ChatWidget({ analysisContext }: Props) {
     {
       role: "assistant",
       content:
-        "Hi! I'm your HomeConfidence assistant. Ask me anything about home buying, your report, or what these numbers mean.",
+        "Hi! I'm your Realease assistant. Ask me anything about home buying, your report, or what these numbers mean.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -76,7 +76,7 @@ export default function ChatWidget({ analysisContext }: Props) {
           <div className="flex items-center justify-between px-4 py-3 bg-base-2 border-b border-base">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-400" />
-              <span className="text-primary text-sm font-semibold">HomeConfidence Chat</span>
+              <span className="text-primary text-sm font-semibold">Realease Chat</span>
             </div>
             <button
               onClick={() => setOpen(false)}

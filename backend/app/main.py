@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="HomeConfidence AI", version="0.1.0")
+app = FastAPI(title="Realease", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
