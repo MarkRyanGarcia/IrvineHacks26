@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { fetchBulkAppreciation, fetchSavedProperties, saveProperty, sendChat } from "../api";
 import Navbar from "../components/Navbar";
 import { useUser } from "@clerk/clerk-react";
@@ -95,6 +96,7 @@ function SwipeCardPlaceholder({
 }
 
 export default function ChattingPage() {
+    const navigate = useNavigate();
     const { user } = useUser();
     const userId = user?.id ?? "";
 
@@ -459,6 +461,34 @@ export default function ChattingPage() {
                                     appreciation={appreciation}
                                     setLiked={setLiked}
                                 />
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "center", width: "100%", marginTop: -24 }}>
+                                <button
+                                    onClick={() => navigate("/dashboard")}
+                                    style={{
+                                        background: "white",
+                                        border: "none",
+                                        borderRadius: 10,
+                                        padding: "12px 32px",
+                                        fontFamily: "'Jost', sans-serif",
+                                        fontSize: 15,
+                                        fontWeight: 600,
+                                        color: "#FF6200",
+                                        cursor: "pointer",
+                                        boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                                        transition: "transform 0.2s, box-shadow 0.2s",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = "translateY(-1px)";
+                                        e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.12)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = "translateY(0)";
+                                        e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.08)";
+                                    }}
+                                >
+                                    See your recommendations
+                                </button>
                             </div>
                             {messages.slice(6).map((msg, i) => (
                                 <div key={i + 6} className={`message ${msg.role}`}>
