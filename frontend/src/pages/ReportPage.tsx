@@ -1,39 +1,171 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import {
-  TrendingDown,
-  TrendingUp,
-  Shield,
-  Sparkles,
-  ArrowLeft,
-  Loader2,
-} from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import ConfidenceGauge from "../components/ConfidenceGauge";
-import ChatWidget from "../components/ChatWidget";
-import { explainResults } from "../api";
-import type { AnalyzeResponse } from "../types";
+import { explainResults, sendChat } from "../api";
+import type { AnalyzeResponse, ChatMessage } from "../types";
 
 function money(n: number) {
-  return n >= 1_000_000
-    ? `$${(n / 1_000_000).toFixed(2)}M`
-    : `$${Math.round(n).toLocaleString()}`;
+  return n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : `$${Math.round(n).toLocaleString()}`;
 }
+function pct(n: number) { return `${(n * 100).toFixed(1)}%`; }
 
-function pct(n: number) {
-  return `${(n * 100).toFixed(1)}%`;
-}
-
-const FRAGILITY_COLOR: Record<string, string> = {
-  Low: "text-green-400",
-  Moderate: "text-yellow-400",
-  High: "text-orange-400",
-  "Very High": "text-red-400",
+const FRAG_COLOR: Record<string, string> = {
+  Low: "#6db8a0",
+  Moderate: "#c4a882",
+  High: "#c48a6a",
+  "Very High": "#c47a6a",
 };
 
+function useWaveCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    let W = (canvas.width = window.innerWidth);
+    let H = (canvas.height = window.innerHeight);
+    const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
+    window.addEventListener("resize", resize);
+    const waves = [
+      { amp: 28, freq: 0.007, speed: 0.003, y: 0.3, color: "rgba(130,195,185,0.13)" },
+      { amp: 20, freq: 0.01, speed: 0.002, y: 0.46, color: "rgba(105,180,200,0.10)" },
+      { amp: 16, freq: 0.013, speed: 0.004, y: 0.6, color: "rgba(148,205,182,0.09)" },
+      { amp: 24, freq: 0.006, speed: 0.0015, y: 0.73, color: "rgba(90,172,198,0.08)" },
+      { amp: 12, freq: 0.017, speed: 0.005, y: 0.86, color: "rgba(128,202,187,0.07)" },
+    ];
+    let t = 0, raf: number;
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      waves.forEach((w) => {
+        ctx.beginPath(); ctx.moveTo(0, H);
+        for (let x = 0; x <= W; x += 2) ctx.lineTo(x, w.y * H + Math.sin(x * w.freq + t * w.speed * 60) * w.amp);
+        ctx.lineTo(W, H); ctx.closePath(); ctx.fillStyle = w.color; ctx.fill();
+      });
+      t++; raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
+  }, []);
+  return ref;
+}
+
+/* ── Inline Chat (report-scoped) ── */
+function ReportChat({ context }: { context: Record<string, unknown> }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { role: "assistant", content: "Have questions about your report? Ask me anything." },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+
+  const send = useCallback(async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    const userMsg: ChatMessage = { role: "user", content: text };
+    const updated = [...messages, userMsg];
+    setMessages(updated);
+    setInput("");
+    setLoading(true);
+    try {
+      const resp = await sendChat({ messages: updated.slice(-10), analysis_context: context });
+      setMessages(prev => [...prev, { role: "assistant", content: resp.reply }]);
+    } catch {
+      setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I had trouble responding. Try again." }]);
+    } finally {
+      setLoading(false);
+    }
+  }, [input, loading, messages, context]);
+
+  return (
+    <div style={{
+      background: "rgba(255,255,255,0.42)", backdropFilter: "blur(20px)",
+      borderRadius: 18, overflow: "hidden", display: "flex", flexDirection: "column",
+      boxShadow: "0 4px 24px rgba(28,58,53,0.06)", maxHeight: 360,
+    }}>
+      <div style={{
+        padding: "12px 18px", borderBottom: "1px solid rgba(42,74,66,0.08)",
+        display: "flex", alignItems: "center", gap: 8, flexShrink: 0,
+      }}>
+        <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#6db8a0", boxShadow: "0 0 6px rgba(109,184,160,0.5)" }} />
+        <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 14, color: "#2a4a42", fontWeight: 500 }}>realease AI</span>
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto", padding: "14px 18px", display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
+        {messages.map((msg, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+            <div style={{
+              maxWidth: "82%", padding: "10px 14px", borderRadius: 14,
+              fontSize: 13, lineHeight: 1.55, fontFamily: "'DM Sans',sans-serif",
+              ...(msg.role === "user"
+                ? { background: "rgba(42,74,66,0.1)", color: "#2a4a42", borderBottomRightRadius: 4 }
+                : { background: "rgba(109,184,160,0.12)", color: "#2a4a42", borderBottomLeftRadius: 4 }),
+            }}>
+              {msg.content}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: "flex", justifyContent: "flex-start" }}>
+            <div style={{ padding: "10px 14px", borderRadius: 14, background: "rgba(109,184,160,0.12)", fontSize: 13, color: "rgba(42,74,66,0.5)" }}>
+              <span style={{ animation: "pulse 1.2s infinite" }}>Thinking...</span>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      <form onSubmit={(e) => { e.preventDefault(); send(); }} style={{
+        padding: "10px 14px", borderTop: "1px solid rgba(42,74,66,0.08)",
+        display: "flex", gap: 8, flexShrink: 0,
+      }}>
+        <input
+          value={input} onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask about your report..."
+          style={{
+            flex: 1, background: "rgba(42,74,66,0.05)", border: "1px solid rgba(42,74,66,0.1)",
+            borderRadius: 10, padding: "9px 14px", fontSize: 13, outline: "none",
+            fontFamily: "'DM Sans',sans-serif", color: "#2a4a42",
+          }}
+        />
+        <button type="submit" disabled={!input.trim() || loading} style={{
+          width: 36, height: 36, borderRadius: 10, border: "none",
+          background: input.trim() ? "rgba(42,74,66,0.8)" : "rgba(42,74,66,0.15)",
+          color: "white", cursor: input.trim() ? "pointer" : "default",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
+          transition: "background 0.2s",
+        }}>→</button>
+      </form>
+    </div>
+  );
+}
+
+/* ── MetricCard ── */
+function MetricCard({ icon, label, value, color }: { icon: string; label: string; value: string; color?: string }) {
+  return (
+    <div style={{
+      background: "rgba(255,255,255,0.48)", backdropFilter: "blur(14px)",
+      borderRadius: 16, padding: "18px 20px",
+      boxShadow: "0 2px 12px rgba(28,58,53,0.05)",
+      display: "flex", flexDirection: "column", gap: 6,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 16 }}>{icon}</span>
+        <span style={{ fontSize: 11, color: "rgba(42,74,66,0.5)", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
+      </div>
+      <span style={{ fontSize: 22, fontWeight: 700, color: color ?? "#2a4a42", fontFamily: "'Playfair Display',serif" }}>{value}</span>
+    </div>
+  );
+}
+
+/* ── Main ReportPage ── */
 export default function ReportPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const canvasRef = useWaveCanvas();
+
   const state = location.state as {
     result: AnalyzeResponse;
     form: { risk_tolerance: number; offer_price: string };
@@ -46,165 +178,167 @@ export default function ReportPage() {
   const explain = useMutation({
     mutationFn: () => {
       if (!result) throw new Error("No result");
-      return explainResults({
-        ...result,
-        offer_price: offerPrice,
-        risk_tolerance: riskTolerance,
-      });
+      return explainResults({ ...result, offer_price: offerPrice, risk_tolerance: riskTolerance });
     },
   });
 
   useEffect(() => {
-    if (result && !explain.data && !explain.isPending) {
-      explain.mutate();
-    }
+    if (result && !explain.data && !explain.isPending) explain.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
 
+  const card: React.CSSProperties = {
+    background: "rgba(255,255,255,0.42)", backdropFilter: "blur(20px)",
+    borderRadius: 18, padding: "24px 22px",
+    boxShadow: "0 4px 24px rgba(28,58,53,0.06)",
+  };
+
   if (!result) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4">
-        <p className="text-secondary">No analysis data found.</p>
-        <button
-          onClick={() => navigate("/analyze")}
-          className="mt-4 text-tertiary underline"
-        >
-          Go back
-        </button>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans',sans-serif" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 0, background: "linear-gradient(155deg, #c0eae2 0%, #acdae8 38%, #c0e8d2 68%, #aadee8 100%)" }} />
+        <div style={{ position: "relative", zIndex: 2, textAlign: "center" }}>
+          <p style={{ fontSize: 16, color: "rgba(42,74,66,0.5)", marginBottom: 16 }}>No analysis data found.</p>
+          <button onClick={() => navigate("/analyze")} style={{
+            background: "rgba(42,74,66,0.1)", border: "1px solid rgba(42,74,66,0.15)",
+            borderRadius: 12, padding: "10px 24px", fontSize: 14, color: "#2a4a42",
+            cursor: "pointer", fontFamily: "inherit",
+          }}>Go to Analyze</button>
+        </div>
       </div>
     );
   }
 
+  const barLeft = 10;
+  const barRight = 10;
+  const p50Pct = result.p10 !== result.p90
+    ? ((result.p50 - result.p10) / (result.p90 - result.p10)) * (100 - barLeft - barRight) + barLeft
+    : 50;
+
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 pt-8 pb-16">
-      <button
-        onClick={() => navigate(-1)}
-        className="self-start flex items-center gap-1 text-secondary hover:text-primary transition mb-4"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+    <div style={{ minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#2a4a42" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+        * { box-sizing: border-box; margin: 0; }
+        @keyframes pulse { 0%,100% { opacity:0.3; } 50% { opacity:1; } }`}</style>
 
-      <h1 className="text-3xl font-bold text-primary mb-6">Your Report</h1>
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, background: "linear-gradient(155deg, #c0eae2 0%, #acdae8 38%, #c0e8d2 68%, #aadee8 100%)" }} />
+      <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none" }} />
 
-      {/* Confidence Gauge */}
-      <ConfidenceGauge score={result.confidence_score} />
+      <div style={{ position: "relative", zIndex: 2, maxWidth: 700, margin: "0 auto", padding: "0 24px" }}>
+        {/* Back */}
+        <button onClick={() => navigate(-1)} style={{
+          marginTop: 28, marginBottom: 8,
+          background: "rgba(255,255,255,0.4)", border: "1px solid rgba(42,74,66,0.1)",
+          borderRadius: 10, padding: "6px 16px", fontSize: 13, color: "#2a4a42",
+          cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
+          display: "inline-flex", alignItems: "center", gap: 6,
+        }}>← Back</button>
 
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-2 gap-4 w-full max-w-md mt-8">
-        <MetricCard
-          icon={<TrendingDown size={18} className="text-red-400" />}
-          label="Downside Risk"
-          value={pct(result.prob_downside)}
-        />
-        <MetricCard
-          icon={<Shield size={18} className="text-tertiary" />}
-          label="Fragility"
-          value={result.fragility_index}
-          valueClass={FRAGILITY_COLOR[result.fragility_index]}
-        />
-        <MetricCard
-          icon={<TrendingUp size={18} className="text-green-400" />}
-          label="Upside (P90)"
-          value={money(result.p90)}
-        />
-        <MetricCard
-          icon={<TrendingDown size={18} className="text-yellow-400" />}
-          label="Downside (P10)"
-          value={money(result.p10)}
-        />
-      </div>
-
-      {/* Projection Band */}
-      <div className="w-full max-w-md mt-8 bg-base-2 rounded-2xl p-5">
-        <h3 className="text-primary font-semibold mb-3">Projected Value Range</h3>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-red-400">{money(result.p10)}</span>
-          <span className="text-primary font-bold text-lg">{money(result.p50)}</span>
-          <span className="text-green-400">{money(result.p90)}</span>
+        {/* Title */}
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 34, fontWeight: 500, color: "#2a4a42", marginBottom: 4 }}>Your Report</h1>
+          <p style={{ fontSize: 13, color: "rgba(42,74,66,0.45)" }}>Based on 1,000 Monte Carlo simulations</p>
         </div>
-        <div className="relative h-3 bg-base rounded-full mt-2 overflow-hidden">
-          <div
-            className="absolute h-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400 rounded-full"
-            style={{ left: "10%", right: "10%" }}
-          />
-        </div>
-        <div className="flex justify-between text-xs text-secondary/60 mt-1">
-          <span>Pessimistic</span>
-          <span>Median</span>
-          <span>Optimistic</span>
-        </div>
-      </div>
 
-      {/* Fair Value */}
-      <div className="w-full max-w-md mt-4 bg-base-2 rounded-2xl p-5">
-        <h3 className="text-primary font-semibold mb-2">Fair Value Band (ZIP Median)</h3>
-        <p className="text-secondary text-sm">
-          {money(result.fair_value_low)} — {money(result.fair_value_high)}
-        </p>
-        {offerPrice > 0 && (
-          <p className="text-xs mt-1 text-secondary/70">
-            Your offer: {money(offerPrice)}{" "}
-            {offerPrice > result.fair_value_high ? (
-              <span className="text-yellow-400">(above fair value range)</span>
-            ) : offerPrice < result.fair_value_low ? (
-              <span className="text-green-400">(below fair value range)</span>
-            ) : (
-              <span className="text-tertiary">(within range)</span>
-            )}
-          </p>
-        )}
-      </div>
-
-      {/* LLM Explanation */}
-      <div className="w-full max-w-md mt-6 bg-base-2 rounded-2xl p-5">
-        <h3 className="text-primary font-semibold mb-3 flex items-center gap-2">
-          <Sparkles size={18} className="text-tertiary" /> AI Insight
-        </h3>
-        {explain.isPending ? (
-          <div className="flex items-center gap-2 text-secondary text-sm">
-            <Loader2 size={16} className="animate-spin" /> Generating explanation...
+        {/* Gauge */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
+          <div style={{ ...card, padding: "28px 40px", textAlign: "center" }}>
+            <ConfidenceGauge score={result.confidence_score} />
           </div>
-        ) : explain.isError ? (
-          <p className="text-red-400 text-sm">
-            Could not generate explanation. Check your OpenAI API key.
-          </p>
-        ) : explain.data ? (
-          <div className="text-secondary text-sm leading-relaxed whitespace-pre-line">
-            {explain.data.explanation}
+        </div>
+
+        {/* Metrics grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+          <MetricCard icon="📉" label="Downside Risk" value={pct(result.prob_downside)} color="#c47a6a" />
+          <MetricCard icon="🛡" label="Fragility" value={result.fragility_index} color={FRAG_COLOR[result.fragility_index] ?? "#2a4a42"} />
+          <MetricCard icon="📈" label="Upside (P90)" value={money(result.p90)} color="#6db8a0" />
+          <MetricCard icon="📊" label="Downside (P10)" value={money(result.p10)} color="#c4a882" />
+        </div>
+
+        {/* Projection bar */}
+        <div style={{ ...card, marginBottom: 16 }}>
+          <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 500, marginBottom: 14 }}>Projected Value Range</h3>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
+            <span style={{ color: "#c47a6a", fontWeight: 600 }}>{money(result.p10)}</span>
+            <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: "#2a4a42" }}>{money(result.p50)}</span>
+            <span style={{ color: "#6db8a0", fontWeight: 600 }}>{money(result.p90)}</span>
           </div>
-        ) : null}
+          <div style={{ position: "relative", height: 10, background: "rgba(42,74,66,0.08)", borderRadius: 6, overflow: "hidden" }}>
+            <div style={{
+              position: "absolute", height: "100%", borderRadius: 6,
+              left: `${barLeft}%`, right: `${barRight}%`,
+              background: "linear-gradient(to right, #c47a6a, #c4a882, #6db8a0)",
+            }} />
+            <div style={{
+              position: "absolute", top: -2, width: 4, height: 14, borderRadius: 2,
+              background: "#2a4a42", left: `${p50Pct}%`, transform: "translateX(-50%)",
+            }} />
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "rgba(42,74,66,0.35)", marginTop: 6, textTransform: "uppercase", letterSpacing: 0.8 }}>
+            <span>Pessimistic</span>
+            <span>Median</span>
+            <span>Optimistic</span>
+          </div>
+        </div>
+
+        {/* Fair value */}
+        <div style={{ ...card, marginBottom: 16 }}>
+          <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 500, marginBottom: 8 }}>Fair Value Band</h3>
+          <p style={{ fontSize: 14, color: "rgba(42,74,66,0.6)" }}>
+            {money(result.fair_value_low)} — {money(result.fair_value_high)}
+          </p>
+          {offerPrice > 0 && (
+            <p style={{ fontSize: 12, color: "rgba(42,74,66,0.45)", marginTop: 6 }}>
+              Your offer: {money(offerPrice)}{" "}
+              {offerPrice > result.fair_value_high ? (
+                <span style={{ color: "#c4a882", fontWeight: 600 }}>(above fair value)</span>
+              ) : offerPrice < result.fair_value_low ? (
+                <span style={{ color: "#6db8a0", fontWeight: 600 }}>(below fair value)</span>
+              ) : (
+                <span style={{ color: "#6db8a0", fontWeight: 600 }}>(within range)</span>
+              )}
+            </p>
+          )}
+        </div>
+
+        {/* AI Insight */}
+        <div style={{ ...card, marginBottom: 20 }}>
+          <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 500, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 18 }}>✨</span> AI Insight
+          </h3>
+          {explain.isPending ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(42,74,66,0.5)" }}>
+              <span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid rgba(42,74,66,0.15)", borderTopColor: "#6db8a0", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+              Generating explanation...
+            </div>
+          ) : explain.isError ? (
+            <p style={{ fontSize: 13, color: "#c47a6a" }}>Could not generate explanation. Check your OpenAI API key.</p>
+          ) : explain.data ? (
+            <p style={{ fontSize: 13.5, color: "rgba(42,74,66,0.7)", lineHeight: 1.7, whiteSpace: "pre-line" }}>{explain.data.explanation}</p>
+          ) : null}
+        </div>
+
+        {/* Chat */}
+        <div style={{ marginBottom: 20 }}>
+          <ReportChat context={{ ...result, offer_price: offerPrice } as unknown as Record<string, unknown>} />
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 14, paddingBottom: 48 }}>
+          <button onClick={() => navigate("/analyze")} style={{
+            background: "rgba(255,255,255,0.45)", border: "1px solid rgba(42,74,66,0.12)",
+            borderRadius: 12, padding: "10px 24px", fontSize: 13, color: "#2a4a42",
+            cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
+          }}>New Analysis</button>
+          <button onClick={() => navigate("/")} style={{
+            background: "rgba(42,74,66,0.8)", border: "none",
+            borderRadius: 12, padding: "10px 24px", fontSize: 13, color: "white",
+            cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
+          }}>Back to Home</button>
+        </div>
       </div>
 
-      {/* Start over */}
-      <button
-        onClick={() => navigate("/")}
-        className="mt-8 px-6 py-3 rounded-xl border border-tertiary/40 text-tertiary hover:bg-tertiary/10 transition"
-      >
-        Start Over
-      </button>
-
-      <ChatWidget analysisContext={{ ...result, offer_price: offerPrice }} />
-    </div>
-  );
-}
-
-function MetricCard({
-  icon,
-  label,
-  value,
-  valueClass = "text-primary",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  valueClass?: string;
-}) {
-  return (
-    <div className="bg-base-2 rounded-xl p-4 flex flex-col gap-1">
-      <div className="flex items-center gap-2 text-secondary text-xs">
-        {icon} {label}
-      </div>
-      <p className={`text-xl font-bold ${valueClass}`}>{value}</p>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

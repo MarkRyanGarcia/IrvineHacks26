@@ -9,49 +9,25 @@ export default function ConfidenceGauge({ score, label = "Confidence" }: Props) 
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - score);
 
-  const color =
-    pct >= 70 ? "#4ade80" : pct >= 45 ? "#facc15" : "#f87171";
+  const color = pct >= 70 ? "#6db8a0" : pct >= 45 ? "#c4a882" : "#c47a6a";
 
   return (
-    <div className="flex flex-col items-center">
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
       <svg width={180} height={180} viewBox="0 0 180 180">
+        <circle cx={90} cy={90} r={radius} fill="none" stroke="rgba(42,74,66,0.1)" strokeWidth={12} />
         <circle
-          cx={90}
-          cy={90}
-          r={radius}
-          fill="none"
-          stroke="#2E2E45"
-          strokeWidth={12}
-        />
-        <circle
-          cx={90}
-          cy={90}
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth={12}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
+          cx={90} cy={90} r={radius} fill="none"
+          stroke={color} strokeWidth={12} strokeLinecap="round"
+          strokeDasharray={circumference} strokeDashoffset={offset}
           transform="rotate(-90 90 90)"
-          className="transition-all duration-1000 ease-out"
+          style={{ transition: "stroke-dashoffset 1s ease-out" }}
         />
-        <text
-          x={90}
-          y={82}
-          textAnchor="middle"
-          className="fill-primary text-4xl font-bold"
-          style={{ fontSize: "2.2rem" }}
-        >
+        <text x={90} y={80} textAnchor="middle" fill="#2a4a42"
+          style={{ fontSize: "2.4rem", fontWeight: 700, fontFamily: "'Playfair Display', serif" }}>
           {pct}%
         </text>
-        <text
-          x={90}
-          y={108}
-          textAnchor="middle"
-          className="fill-secondary text-sm"
-          style={{ fontSize: "0.85rem" }}
-        >
+        <text x={90} y={108} textAnchor="middle" fill="rgba(42,74,66,0.45)"
+          style={{ fontSize: "0.8rem", fontWeight: 500, fontFamily: "'DM Sans', sans-serif", letterSpacing: 1.2, textTransform: "uppercase" }}>
           {label}
         </text>
       </svg>

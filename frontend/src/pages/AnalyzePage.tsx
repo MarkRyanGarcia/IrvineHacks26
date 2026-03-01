@@ -91,7 +91,7 @@ export default function AnalyzePage() {
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [key]: e.target.value });
 
-  const inputStyle = (key: string): React.CSSProperties => ({
+  const inputStyle = (_key: string): React.CSSProperties => ({
     width: "100%",
     background: "transparent",
     border: "none",
@@ -332,7 +332,7 @@ export default function AnalyzePage() {
                 Running simulations...
               </>
             ) : (
-              <>🔍 Analyze</>
+              <>Analyze</>
             )}
           </button>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
