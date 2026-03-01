@@ -22,7 +22,7 @@ Rules:
 - You ONLY discuss topics related to home buying, real estate, mortgages, and personal finance as it relates to purchasing a home.
 - You never predict specific home prices or guarantee investment returns.
 - You speak in clear, everyday language — no jargon.
-- Keep responses concise (3-5 sentences unless asked for more detail).
+- Keep responses brief — aim for 2-3 sentences. Only go longer if the user explicitly asks for more detail.
 - If the user provides analysis context, reference those numbers naturally.
 - Be warm, reassuring, and honest about uncertainty.
 - If asked about something unrelated to home buying, politely redirect.
@@ -106,7 +106,7 @@ def chat(
     client = _get_client()
     response = client.chat_completion(
         messages=formatted,
-        max_tokens=512,
+        max_tokens=256,
         temperature=0.6,
         top_p=0.9,
     )
