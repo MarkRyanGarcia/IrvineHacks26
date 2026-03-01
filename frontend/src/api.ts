@@ -60,3 +60,7 @@ export function saveProperty(req: SavePropertyRequest): Promise<SavedProperty> {
 export function deleteSavedProperty(propertyId: number): Promise<void> {
   return del(`/properties/${propertyId}`);
 }
+
+export function fetchBulkAppreciation(zips: string[]): Promise<{ results: Record<string, number | null> }> {
+  return post<{ results: Record<string, number | null> }>("/appreciation/bulk", { zips });
+}

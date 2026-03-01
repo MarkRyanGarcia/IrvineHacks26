@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { UserButton, useUser } from "@clerk/clerk-react";
 import { MOCK_PROPERTIES } from "../data/properties";
 import type { PropertyCard, SavedProperty, ChatMessage } from "../types";
-import { sendChat, saveProperty, fetchSavedProperties, deleteSavedProperty } from "../api";
+import { sendChat, saveProperty, fetchSavedProperties, deleteSavedProperty, fetchBulkAppreciation } from "../api";
 
 /* ── helpers ── */
 function fmtPrice(n: number) {
@@ -91,9 +91,9 @@ function useWaveCanvas(paused: boolean) {
 }
 
 /* ── SwipeCard ── */
-interface SwipeCardProps { listing: PropertyCard; onSwipe: (action: "like" | "dislike") => void; isTop: boolean; stackIndex: number; }
+interface SwipeCardProps { listing: PropertyCard; onSwipe: (action: "like" | "dislike") => void; isTop: boolean; stackIndex: number; appreciationPct?: number | null; }
 
-function SwipeCard({ listing, onSwipe, isTop, stackIndex }: SwipeCardProps) {
+function SwipeCard({ listing, onSwipe, isTop, stackIndex, appreciationPct }: SwipeCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const likeRef = useRef<HTMLDivElement>(null);
   const nopeRef = useRef<HTMLDivElement>(null);
@@ -215,11 +215,17 @@ function SwipeCard({ listing, onSwipe, isTop, stackIndex }: SwipeCardProps) {
                 }}>{tag.label}</span>
               ))}
             </div>
-            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.52)", lineHeight: 1.45, fontStyle: "italic" }}>
-              {listing.school_score >= 8 ? "Top-rated schools in this area." : ""}
-              {listing.commute_minutes <= 15 ? " Quick commute." : ""}
-              {listing.price < 700000 ? " Within a typical first-time budget." : ""}
-            </p>
+            {appreciationPct != null && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 700,
+                  color: appreciationPct >= 0 ? "#6db8a0" : "#c47a6a",
+                }}>
+                  {appreciationPct >= 0 ? "▲" : "▼"} {Math.abs(appreciationPct * 100).toFixed(1)}%
+                </span>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.42)" }}>predicted 12-mo value change</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -485,12 +491,22 @@ export default function DashboardPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [fadeIn, setFadeIn] = useState(true);
   const [tab, setTab] = useState<"explore" | "saved" | "journey">("explore");
+  const [appreciation, setAppreciation] = useState<Record<string, number | null>>({});
   const canvasRef = useWaveCanvas(tab === "explore");
   const surveyDone = surveyStep >= SURVEY.length;
 
   useEffect(() => {
     if (userId) fetchSavedProperties(userId).then(setSaved).catch(() => {});
   }, [userId]);
+
+  useEffect(() => {
+    const mockZips = MOCK_PROPERTIES.map(p => p.zip);
+    const savedZips = saved.map(p => p.zip_code);
+    const allZips = [...new Set([...mockZips, ...savedZips])];
+    if (allZips.length > 0) {
+      fetchBulkAppreciation(allZips).then(r => setAppreciation(prev => ({ ...prev, ...r.results }))).catch(() => {});
+    }
+  }, [saved]);
 
   const handleSwipe = (action: "like" | "dislike") => {
     const top = deck[deck.length - 1];
@@ -604,7 +620,7 @@ export default function DashboardPage() {
                 ) : (
                   deck.slice(-3).map((listing, i) => {
                     const stackIndex = Math.min(deck.length, 3) - 1 - i;
-                    return <SwipeCard key={listing.id} listing={listing} onSwipe={handleSwipe} isTop={stackIndex === 0} stackIndex={stackIndex} />;
+                    return <SwipeCard key={listing.id} listing={listing} onSwipe={handleSwipe} isTop={stackIndex === 0} stackIndex={stackIndex} appreciationPct={appreciation[listing.zip] ?? null} />;
                   })
                 )}
               </div>
@@ -659,11 +675,14 @@ export default function DashboardPage() {
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
                 {saved.length > 0 ? saved.filter(item => item.liked === true).map(p => {
-                  const localMatch = liked.find(l => l.address === p.address);
+                  const image =
+                    MOCK_PROPERTIES.find(m => m.address === p.address)?.image ??
+                    liked.find(l => l.address === p.address)?.image;
+                  const appPct = appreciation[p.zip_code];
                   return (
                     <div key={p.id} style={{ background: "rgba(255,255,255,0.5)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(28,58,53,0.08)" }}>
-                      {localMatch ? (
-                        <img src={localMatch.image} alt="" style={{ width: "100%", height: 160, objectFit: "cover" }} />
+                      {image ? (
+                        <img src={image} alt="" style={{ width: "100%", height: 160, objectFit: "cover" }} />
                       ) : (
                         <div style={{ height: 120, background: "linear-gradient(135deg, rgba(109,184,160,0.15), rgba(90,172,198,0.15))", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <span style={{ fontSize: 36 }}>🏠</span>
@@ -672,6 +691,14 @@ export default function DashboardPage() {
                       <div style={{ padding: "12px 16px" }}>
                         <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: "#2a4a42", marginBottom: 4 }}>{p.address}</h3>
                         <p style={{ fontSize: 12, color: "rgba(42,74,66,0.5)" }}>{p.city} · {p.beds}bd {p.baths}ba · {p.sqft.toLocaleString()} sqft</p>
+                        {appPct != null && (
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 6, padding: "3px 10px", borderRadius: 12, background: appPct >= 0 ? "rgba(109,184,160,0.12)" : "rgba(196,122,106,0.10)" }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: appPct >= 0 ? "#3a9a7e" : "#c47a6a" }}>
+                              {appPct >= 0 ? "▲" : "▼"} {Math.abs(appPct * 100).toFixed(1)}%
+                            </span>
+                            <span style={{ fontSize: 10, color: "rgba(42,74,66,0.45)" }}>12-mo forecast</span>
+                          </div>
+                        )}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
                           <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, color: "#2a4a42" }}>{fmtPrice(p.price)}</span>
                           <div style={{ display: "flex", gap: 6 }}>
@@ -688,22 +715,33 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   );
-                }) : liked.map(p => (
-                  <div key={p.id} style={{ background: "rgba(255,255,255,0.5)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(28,58,53,0.08)" }}>
-                    <img src={p.image} alt="" style={{ width: "100%", height: 160, objectFit: "cover" }} />
-                    <div style={{ padding: "12px 16px" }}>
-                      <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: "#2a4a42", marginBottom: 4 }}>{p.address}</h3>
-                      <p style={{ fontSize: 12, color: "rgba(42,74,66,0.5)" }}>{p.city} · {p.beds}bd {p.baths}ba · {p.sqft.toLocaleString()} sqft</p>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                        <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, color: "#2a4a42" }}>{fmtPrice(p.price)}</span>
-                        <button onClick={() => navigate("/analyze", { state: { prefill: { zip: p.zip, current_price: p.price, offer_price: p.price } } })} style={{
-                          background: "rgba(42,74,66,0.1)", border: "none", borderRadius: 10, padding: "6px 14px",
-                          fontSize: 12, color: "#2a4a42", cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
-                        }}>Analyze →</button>
+                }) : liked.map(p => {
+                  const appPct = appreciation[p.zip];
+                  return (
+                    <div key={p.id} style={{ background: "rgba(255,255,255,0.5)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(28,58,53,0.08)" }}>
+                      <img src={p.image} alt="" style={{ width: "100%", height: 160, objectFit: "cover" }} />
+                      <div style={{ padding: "12px 16px" }}>
+                        <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: "#2a4a42", marginBottom: 4 }}>{p.address}</h3>
+                        <p style={{ fontSize: 12, color: "rgba(42,74,66,0.5)" }}>{p.city} · {p.beds}bd {p.baths}ba · {p.sqft.toLocaleString()} sqft</p>
+                        {appPct != null && (
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 6, padding: "3px 10px", borderRadius: 12, background: appPct >= 0 ? "rgba(109,184,160,0.12)" : "rgba(196,122,106,0.10)" }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: appPct >= 0 ? "#3a9a7e" : "#c47a6a" }}>
+                              {appPct >= 0 ? "▲" : "▼"} {Math.abs(appPct * 100).toFixed(1)}%
+                            </span>
+                            <span style={{ fontSize: 10, color: "rgba(42,74,66,0.45)" }}>12-mo forecast</span>
+                          </div>
+                        )}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                          <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, color: "#2a4a42" }}>{fmtPrice(p.price)}</span>
+                          <button onClick={() => navigate("/analyze", { state: { prefill: { zip: p.zip, current_price: p.price, offer_price: p.price } } })} style={{
+                            background: "rgba(42,74,66,0.1)", border: "none", borderRadius: 10, padding: "6px 14px",
+                            fontSize: 12, color: "#2a4a42", cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
+                          }}>Analyze →</button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
