@@ -1,6 +1,6 @@
 import type { AnalyzeRequest, AnalyzeResponse, ExplainResponse, ChatRequest, ChatResponse, SavedProperty, SavePropertyRequest } from "./types";
 
-const API_BASE = import.meta.env.VITE_API_BACKEND_URL || "http://localhost:8000";
+export const API_BASE = import.meta.env.VITE_API_BACKEND_URL || "http://localhost:8000";
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

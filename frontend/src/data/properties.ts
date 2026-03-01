@@ -1,3 +1,4 @@
+import { API_BASE } from "../api";
 import type { PropertyCard } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -112,7 +113,7 @@ export function mapZillowToPropertyCard(property: any, index: number): PropertyC
 // Fetch live properties from your backend (which calls the Zillow API)
 // ---------------------------------------------------------------------------
 export async function fetchProperties(): Promise<PropertyCard[]> {
-  const response = await fetch("/api/zillow/properties");
+  const response = await fetch(`${API_BASE}/zillow/search`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch properties: ${response.statusText}`);
