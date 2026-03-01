@@ -83,7 +83,7 @@ export default function SwipeCard({ listing, onSwipe, isTop, stackIndex, appreci
       <div style={{
         width: "100%", height: "100%", borderRadius: 20, overflow: "hidden",
         background: "rgba(0,0,0,0)",
-        boxShadow: isTop ? "0 20px 56px rgba(120,40,0,0.28)" : "0 6px 20px rgba(120,40,0,0.14)",
+        boxShadow: isTop ? "0 10px 28px rgba(120,40,0,0.2)" : "0 4px 12px rgba(120,40,0,0.12)",
         display: "flex", flexDirection: "column",
       }}>
         <div style={{ position: "relative", flex: 1, minHeight: 0, overflow: "hidden", background: "rgba(28,58,53,0.06)" }}>
