@@ -1,11 +1,12 @@
 import os
 from typing import Annotated, List
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException, Query, requests
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app.schemas.properties import PropertiesCreate, PropertiesOut
 from app.db.models.properties import Properties
 from app.deps.db import get_db
 from app.core.config import RAPIDAPI_KEY
+import requests
 
 router = APIRouter(tags=["zillow"])
 
