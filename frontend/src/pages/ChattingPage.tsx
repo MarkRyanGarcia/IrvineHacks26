@@ -5,7 +5,8 @@ import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { fetchProperties } from "../data/properties";
 import type { PropertyCard, SavedProperty } from "../types";
-import { SURVEY, useWaveCanvas } from "./DashboardPage";
+import { SURVEY } from "../data/dashboardData";
+import { useWaveCanvas } from "./DashboardPage";
 import SwipeCard from "../components/SwipeCard";
 // Import your SwipeCard component here
 // import SwipeCard from "../components/SwipeCard"; 
