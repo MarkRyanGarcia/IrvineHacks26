@@ -30,10 +30,10 @@ export default function App() {
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Protected><DashboardPage /></Protected>} />
+          <Route path="/" element={<ChattingPage />} />
+          <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
           <Route path="/analyze" element={<Protected><AnalyzePage /></Protected>} />
           <Route path="/report" element={<Protected><ReportPage /></Protected>} />
-          <Route path="/chat" element={<Protected><ChattingPage /></Protected>} />
         </Routes>
       </BrowserRouter>
     </ClerkProvider>

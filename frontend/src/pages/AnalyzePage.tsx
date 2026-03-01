@@ -150,7 +150,7 @@ export default function AnalyzePage() {
       <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: 520, padding: "0 24px" }}>
         {/* Back button */}
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/dashboard")}
           style={{
             marginTop: 28, marginBottom: 12,
             background: "rgba(255,255,255,0.4)",

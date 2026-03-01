@@ -310,7 +310,7 @@ export default function ReportPage() {
             borderRadius: 12, padding: "10px 24px", fontSize: 13, color: "#2a4a42",
             cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
           }}>New Analysis</button>
-          <button onClick={() => navigate("/")} style={{
+          <button onClick={() => navigate("/dashboard")} style={{
             background: "rgba(42,74,66,0.8)", border: "none",
             borderRadius: 12, padding: "10px 24px", fontSize: 13, color: "white",
             cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
