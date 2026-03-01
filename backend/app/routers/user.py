@@ -23,25 +23,6 @@ def get_user(
     return db.query(User).filter(User.id == user_id).first()
 
 
-@router.post("/user/test", response_model=UserOut)
-def create_user(
-    user_in: UserCreate,
-    db: Annotated[Session, Depends(get_db)],
-    # auth_id: Annotated[str, Depends(require_clerk_auth)],
-):
-    # if auth_id != user_in.id:
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
-
-    existing_user = db.query(User).filter((User.id == user_in.id)).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User already exists")
-
-    user = User(**user_in.model_dump())
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
-
 @router.post("/user")
 async def create_user(
     request: Request,
