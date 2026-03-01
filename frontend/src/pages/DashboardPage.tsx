@@ -525,6 +525,7 @@ export default function DashboardPage() {
           school_score: top.school_score,
           zip_code: top.zip,
           commute_minutes: top.commute_minutes,
+          liked: true,
         }).then(s => setSaved(prev => [...prev, s])).catch(() => {});
       }
     }
