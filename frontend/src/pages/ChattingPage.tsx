@@ -175,7 +175,7 @@ export default function ChattingPage() {
             }
         }
         setDeck(d => d.slice(0, -1));
-    };
+    }; 
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
