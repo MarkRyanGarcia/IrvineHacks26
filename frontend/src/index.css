@@ -2,7 +2,7 @@
 
 :root {
     font-family: 'Poppins', system-ui, Avenir, Helvetica, Arial, sans-serif;
-    background: var(--color-base);
+    background: var(--color-leo-orange);
     min-height: 100vh;
     /* overflow: hidden; */
 }
@@ -20,5 +20,6 @@ html, body, #root {
     --color-tertiary: #91DCE5;
     --color-base: #1D1E2D;
     --color-base-2: #2E2E45;
+    --color-leo-orange: #FF6201;
   }
   
