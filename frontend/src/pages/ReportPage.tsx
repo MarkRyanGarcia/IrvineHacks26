@@ -10,11 +10,12 @@ function money(n: number) {
 }
 function pct(n: number) { return `${(n * 100).toFixed(1)}%`; }
 
+const LEO_ORANGE = "#FF6201";
 const FRAG_COLOR: Record<string, string> = {
-  Low: "#6db8a0",
-  Moderate: "#c4a882",
-  High: "#c48a6a",
-  "Very High": "#c47a6a",
+  Low: "#4ade80",
+  Moderate: "#fbbf24",
+  High: "#f97316",
+  "Very High": "#dc2626",
 };
 
 function useWaveCanvas() {
@@ -28,11 +29,11 @@ function useWaveCanvas() {
     const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
     window.addEventListener("resize", resize);
     const waves = [
-      { amp: 28, freq: 0.007, speed: 0.003, y: 0.3, color: "rgba(130,195,185,0.13)" },
-      { amp: 20, freq: 0.01, speed: 0.002, y: 0.46, color: "rgba(105,180,200,0.10)" },
-      { amp: 16, freq: 0.013, speed: 0.004, y: 0.6, color: "rgba(148,205,182,0.09)" },
-      { amp: 24, freq: 0.006, speed: 0.0015, y: 0.73, color: "rgba(90,172,198,0.08)" },
-      { amp: 12, freq: 0.017, speed: 0.005, y: 0.86, color: "rgba(128,202,187,0.07)" },
+      { amp: 32, freq: 0.007, speed: 0.003, y: 0.3, color: "rgba(255,98,1,0.18)" },
+      { amp: 24, freq: 0.01, speed: 0.002, y: 0.46, color: "rgba(255,140,50,0.14)" },
+      { amp: 20, freq: 0.013, speed: 0.004, y: 0.6, color: "rgba(255,180,100,0.12)" },
+      { amp: 28, freq: 0.006, speed: 0.0015, y: 0.73, color: "rgba(255,120,30,0.16)" },
+      { amp: 16, freq: 0.017, speed: 0.005, y: 0.86, color: "rgba(255,98,1,0.10)" },
     ];
     let t = 0, raf: number;
     const draw = () => {
@@ -81,16 +82,16 @@ function ReportChat({ context }: { context: Record<string, unknown> }) {
 
   return (
     <div style={{
-      background: "rgba(255,255,255,0.42)", backdropFilter: "blur(20px)",
+      background: "rgba(255,255,255,0.9)", backdropFilter: "blur(20px)",
       borderRadius: 18, overflow: "hidden", display: "flex", flexDirection: "column",
-      boxShadow: "0 4px 24px rgba(28,58,53,0.06)", maxHeight: 360,
+      boxShadow: "0 4px 24px rgba(0,0,0,0.08)", maxHeight: 360,
     }}>
       <div style={{
-        padding: "12px 18px", borderBottom: "1px solid rgba(42,74,66,0.08)",
+        padding: "12px 18px", borderBottom: "1px solid rgba(255,98,1,0.15)",
         display: "flex", alignItems: "center", gap: 8, flexShrink: 0,
       }}>
-        <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#6db8a0", boxShadow: "0 0 6px rgba(109,184,160,0.5)" }} />
-        <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 14, color: "#2a4a42", fontWeight: 500 }}>realease AI</span>
+        <div style={{ width: 7, height: 7, borderRadius: "50%", background: LEO_ORANGE, boxShadow: "0 0 6px rgba(255,98,1,0.5)" }} />
+        <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 14, color: "#1a1a1a", fontWeight: 500 }}>realease AI</span>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "14px 18px", display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
@@ -100,8 +101,8 @@ function ReportChat({ context }: { context: Record<string, unknown> }) {
               maxWidth: "82%", padding: "10px 14px", borderRadius: 14,
               fontSize: 13, lineHeight: 1.55, fontFamily: "'DM Sans',sans-serif",
               ...(msg.role === "user"
-                ? { background: "rgba(42,74,66,0.1)", color: "#2a4a42", borderBottomRightRadius: 4 }
-                : { background: "rgba(109,184,160,0.12)", color: "#2a4a42", borderBottomLeftRadius: 4 }),
+                ? { background: "rgba(255,98,1,0.12)", color: "#1a1a1a", borderBottomRightRadius: 4 }
+                : { background: "rgba(255,98,1,0.08)", color: "#1a1a1a", borderBottomLeftRadius: 4 }),
             }}>
               {msg.content}
             </div>
@@ -109,7 +110,7 @@ function ReportChat({ context }: { context: Record<string, unknown> }) {
         ))}
         {loading && (
           <div style={{ display: "flex", justifyContent: "flex-start" }}>
-            <div style={{ padding: "10px 14px", borderRadius: 14, background: "rgba(109,184,160,0.12)", fontSize: 13, color: "rgba(42,74,66,0.5)" }}>
+            <div style={{ padding: "10px 14px", borderRadius: 14, background: "rgba(255,98,1,0.08)", fontSize: 13, color: "rgba(0,0,0,0.5)" }}>
               <span style={{ animation: "pulse 1.2s infinite" }}>Thinking...</span>
             </div>
           </div>
@@ -118,21 +119,21 @@ function ReportChat({ context }: { context: Record<string, unknown> }) {
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); send(); }} style={{
-        padding: "10px 14px", borderTop: "1px solid rgba(42,74,66,0.08)",
+        padding: "10px 14px", borderTop: "1px solid rgba(255,98,1,0.15)",
         display: "flex", gap: 8, flexShrink: 0,
       }}>
         <input
           value={input} onChange={(e) => setInput(e.target.value)}
           placeholder="Ask about your report..."
           style={{
-            flex: 1, background: "rgba(42,74,66,0.05)", border: "1px solid rgba(42,74,66,0.1)",
+            flex: 1, background: "rgba(255,98,1,0.06)", border: "1px solid rgba(255,98,1,0.2)",
             borderRadius: 10, padding: "9px 14px", fontSize: 13, outline: "none",
-            fontFamily: "'DM Sans',sans-serif", color: "#2a4a42",
+            fontFamily: "'DM Sans',sans-serif", color: "#1a1a1a",
           }}
         />
         <button type="submit" disabled={!input.trim() || loading} style={{
           width: 36, height: 36, borderRadius: 10, border: "none",
-          background: input.trim() ? "rgba(42,74,66,0.8)" : "rgba(42,74,66,0.15)",
+          background: input.trim() ? LEO_ORANGE : "rgba(255,98,1,0.2)",
           color: "white", cursor: input.trim() ? "pointer" : "default",
           display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
           transition: "background 0.2s",
@@ -146,13 +147,13 @@ function ReportChat({ context }: { context: Record<string, unknown> }) {
 function MetricCard({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div style={{
-      background: "rgba(255,255,255,0.48)", backdropFilter: "blur(14px)",
+      background: "rgba(255,255,255,0.92)", backdropFilter: "blur(14px)",
       borderRadius: 16, padding: "18px 20px",
-      boxShadow: "0 2px 12px rgba(28,58,53,0.05)",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
       display: "flex", flexDirection: "column", gap: 6,
     }}>
-      <span style={{ fontSize: 11, color: "rgba(42,74,66,0.5)", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
-      <span style={{ fontSize: 22, fontWeight: 700, color: color ?? "#2a4a42", fontFamily: "'Playfair Display',serif" }}>{value}</span>
+      <span style={{ fontSize: 11, color: "rgba(0,0,0,0.5)", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
+      <span style={{ fontSize: 22, fontWeight: 700, color: color ?? "#1a1a1a", fontFamily: "'Playfair Display',serif" }}>{value}</span>
     </div>
   );
 }
@@ -185,56 +186,54 @@ export default function ReportPage() {
   }, [result]);
 
   const card: React.CSSProperties = {
-    background: "rgba(255,255,255,0.42)", backdropFilter: "blur(20px)",
+    background: "rgba(255,255,255,0.92)", backdropFilter: "blur(20px)",
     borderRadius: 18, padding: "24px 22px",
-    boxShadow: "0 4px 24px rgba(28,58,53,0.06)",
+    boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
   };
 
   if (!result) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans',sans-serif" }}>
-        <div style={{ position: "fixed", inset: 0, zIndex: 0, background: "linear-gradient(155deg, #c0eae2 0%, #acdae8 38%, #c0e8d2 68%, #aadee8 100%)" }} />
+        <div style={{ position: "fixed", inset: 0, zIndex: 0, background: LEO_ORANGE }} />
         <div style={{ position: "relative", zIndex: 2, textAlign: "center" }}>
-          <p style={{ fontSize: 16, color: "rgba(42,74,66,0.5)", marginBottom: 16 }}>No analysis data found.</p>
+          <p style={{ fontSize: 16, color: "rgba(255,255,255,0.9)", marginBottom: 16 }}>No analysis data found.</p>
           <button onClick={() => navigate("/analyze")} style={{
-            background: "rgba(42,74,66,0.1)", border: "1px solid rgba(42,74,66,0.15)",
-            borderRadius: 12, padding: "10px 24px", fontSize: 14, color: "#2a4a42",
-            cursor: "pointer", fontFamily: "inherit",
+            background: "rgba(255,255,255,0.9)", border: "none",
+            borderRadius: 12, padding: "10px 24px", fontSize: 14, color: LEO_ORANGE,
+            cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
           }}>Go to Analyze</button>
         </div>
       </div>
     );
   }
 
-  const barLeft = 10;
-  const barRight = 10;
   const p50Pct = result.p10 !== result.p90
-    ? ((result.p50 - result.p10) / (result.p90 - result.p10)) * (100 - barLeft - barRight) + barLeft
+    ? ((result.p50 - result.p10) / (result.p90 - result.p10)) * 100
     : 50;
 
   return (
-    <div style={{ minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#2a4a42" }}>
+    <div style={{ minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#1a1a1a" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
         * { box-sizing: border-box; margin: 0; }
         @keyframes pulse { 0%,100% { opacity:0.3; } 50% { opacity:1; } }`}</style>
 
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, background: "linear-gradient(155deg, #c0eae2 0%, #acdae8 38%, #c0e8d2 68%, #aadee8 100%)" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, background: LEO_ORANGE }} />
       <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none" }} />
 
       <div style={{ position: "relative", zIndex: 2, maxWidth: 700, margin: "0 auto", padding: "0 24px" }}>
         {/* Back */}
         <button onClick={() => navigate(-1)} style={{
           marginTop: 28, marginBottom: 8,
-          background: "rgba(255,255,255,0.4)", border: "1px solid rgba(42,74,66,0.1)",
-          borderRadius: 10, padding: "6px 16px", fontSize: 13, color: "#2a4a42",
-          cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
+          background: "rgba(255,255,255,0.9)", border: "none",
+          borderRadius: 10, padding: "6px 16px", fontSize: 13, color: LEO_ORANGE,
+          cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
           display: "inline-flex", alignItems: "center", gap: 6,
         }}>← Back</button>
 
         {/* Title */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 34, fontWeight: 500, color: "#2a4a42", marginBottom: 4 }}>Your Report</h1>
-          <p style={{ fontSize: 13, color: "rgba(42,74,66,0.45)" }}>Based on 1,000 Monte Carlo simulations</p>
+          <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 34, fontWeight: 500, color: "white", marginBottom: 4, textShadow: "0 1px 2px rgba(0,0,0,0.1)" }}>Your Report</h1>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>Based on 1,000 Monte Carlo simulations</p>
         </div>
 
         {/* Gauge */}
@@ -246,32 +245,31 @@ export default function ReportPage() {
 
         {/* Metrics grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
-          <MetricCard label="Downside Risk" value={pct(result.prob_downside)} color="#c47a6a" />
-          <MetricCard label="Fragility" value={result.fragility_index} color={FRAG_COLOR[result.fragility_index] ?? "#2a4a42"} />
-          <MetricCard label="Upside (P90)" value={money(result.p90)} color="#6db8a0" />
-          <MetricCard label="Downside (P10)" value={money(result.p10)} color="#c4a882" />
+          <MetricCard label="Downside Risk" value={pct(result.prob_downside)} color="#dc2626" />
+          <MetricCard label="Fragility" value={result.fragility_index} color={FRAG_COLOR[result.fragility_index] ?? "#1a1a1a"} />
+          <MetricCard label="Upside (P90)" value={money(result.p90)} color="#16a34a" />
+          <MetricCard label="Downside (P10)" value={money(result.p10)} color="#ea580c" />
         </div>
 
         {/* Projection bar */}
         <div style={{ ...card, marginBottom: 16 }}>
-          <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 500, marginBottom: 14 }}>Projected Value Range</h3>
+          <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 500, marginBottom: 14, color: "#1a1a1a" }}>Projected Value Range</h3>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
-            <span style={{ color: "#c47a6a", fontWeight: 600 }}>{money(result.p10)}</span>
-            <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: "#2a4a42" }}>{money(result.p50)}</span>
-            <span style={{ color: "#6db8a0", fontWeight: 600 }}>{money(result.p90)}</span>
+            <span style={{ color: "#dc2626", fontWeight: 600 }}>{money(result.p10)}</span>
+            <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: "#1a1a1a" }}>{money(result.p50)}</span>
+            <span style={{ color: "#16a34a", fontWeight: 600 }}>{money(result.p90)}</span>
           </div>
-          <div style={{ position: "relative", height: 10, background: "rgba(42,74,66,0.08)", borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ position: "relative", height: 10, background: "rgba(255,98,1,0.15)", borderRadius: 6, overflow: "hidden" }}>
             <div style={{
-              position: "absolute", height: "100%", borderRadius: 6,
-              left: `${barLeft}%`, right: `${barRight}%`,
-              background: "linear-gradient(to right, #c47a6a, #c4a882, #6db8a0)",
+              position: "absolute", inset: 0, height: "100%", borderRadius: 6,
+              background: "linear-gradient(to right, #dc2626, #ea580c, #16a34a)",
             }} />
             <div style={{
               position: "absolute", top: -2, width: 4, height: 14, borderRadius: 2,
-              background: "#2a4a42", left: `${p50Pct}%`, transform: "translateX(-50%)",
+              background: LEO_ORANGE, left: `${p50Pct}%`, transform: "translateX(-50%)",
             }} />
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "rgba(42,74,66,0.35)", marginTop: 6, textTransform: "uppercase", letterSpacing: 0.8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "rgba(0,0,0,0.4)", marginTop: 6, textTransform: "uppercase", letterSpacing: 0.8 }}>
             <span>Pessimistic</span>
             <span>Median</span>
             <span>Optimistic</span>
@@ -280,19 +278,19 @@ export default function ReportPage() {
 
         {/* Fair value */}
         <div style={{ ...card, marginBottom: 16 }}>
-          <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 500, marginBottom: 8 }}>Fair Value Band</h3>
-          <p style={{ fontSize: 14, color: "rgba(42,74,66,0.6)" }}>
+          <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 500, marginBottom: 8, color: "#1a1a1a" }}>Fair Value Band</h3>
+          <p style={{ fontSize: 14, color: "rgba(0,0,0,0.65)" }}>
             {money(result.fair_value_low)} — {money(result.fair_value_high)}
           </p>
           {offerPrice > 0 && (
-            <p style={{ fontSize: 12, color: "rgba(42,74,66,0.45)", marginTop: 6 }}>
+            <p style={{ fontSize: 12, color: "rgba(0,0,0,0.5)", marginTop: 6 }}>
               Your offer: {money(offerPrice)}{" "}
               {offerPrice > result.fair_value_high ? (
-                <span style={{ color: "#c4a882", fontWeight: 600 }}>(above fair value)</span>
+                <span style={{ color: "#ea580c", fontWeight: 600 }}>(above fair value)</span>
               ) : offerPrice < result.fair_value_low ? (
-                <span style={{ color: "#6db8a0", fontWeight: 600 }}>(below fair value)</span>
+                <span style={{ color: "#16a34a", fontWeight: 600 }}>(below fair value)</span>
               ) : (
-                <span style={{ color: "#6db8a0", fontWeight: 600 }}>(within range)</span>
+                <span style={{ color: "#16a34a", fontWeight: 600 }}>(within range)</span>
               )}
             </p>
           )}
@@ -306,13 +304,13 @@ export default function ReportPage() {
         {/* Actions */}
         <div style={{ display: "flex", justifyContent: "center", gap: 14, paddingBottom: 48 }}>
           <button onClick={() => navigate("/analyze")} style={{
-            background: "rgba(255,255,255,0.45)", border: "1px solid rgba(42,74,66,0.12)",
-            borderRadius: 12, padding: "10px 24px", fontSize: 13, color: "#2a4a42",
-            cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
+            background: "rgba(255,255,255,0.9)", border: "none",
+            borderRadius: 12, padding: "10px 24px", fontSize: 13, color: LEO_ORANGE,
+            cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
           }}>New Analysis</button>
           <button onClick={() => navigate("/dashboard")} style={{
-            background: "rgba(42,74,66,0.8)", border: "none",
-            borderRadius: 12, padding: "10px 24px", fontSize: 13, color: "white",
+            background: "white", border: "2px solid white",
+            borderRadius: 12, padding: "10px 24px", fontSize: 13, color: LEO_ORANGE,
             cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
           }}>Back to Home</button>
         </div>

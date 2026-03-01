@@ -9,7 +9,7 @@ export default function ConfidenceGauge({ score, label = "Confidence" }: Props) 
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - score);
 
-  const color = pct >= 70 ? "#6db8a0" : pct >= 45 ? "#c4a882" : "#c47a6a";
+  const color = pct >= 70 ? "#16a34a" : pct >= 45 ? "#f59e0b" : "#dc2626";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
