@@ -150,33 +150,49 @@ export default function ChattingPage() {
     }, [saved, properties]);
 
     // Handle Swiping Logic
-    const handleSwipe = (action: "like" | "dislike") => {
+    const handleSwipe = async (action: "like" | "dislike") => {
+        // 1. Get the top card from the deck
         const top = deck[deck.length - 1];
-        if (top) {
-            setLiked(l => [...l, top]);
-            if (userId) {
-                saveProperty({
+        if (!top) return;
+
+        // 2. Optimistically update local state
+        if (action === "like") {
+            setLiked(prev => [...prev, top]);
+        }
+        
+        // Remove from deck immediately for UI responsiveness
+        setDeck(prev => prev.slice(0, -1));
+
+        // 3. API Call
+        if (userId) {
+            try {
+                // Ensure we handle potential nulls from the property data
+                const payload = {
                     user_id: userId,
                     liked: action === "like",
-                    zpid: top.zpid,
-                    street_address: top.street_address,
-                    city: top.city,
-                    state: top.state,
-                    zip_code: top.zip_code,
-                    latitude: top.latitude,
-                    longitude: top.longitude,
-                    price: top.price,
-                    price_per_sqft: top.price_per_sqft,
-                    property_type: top.property_type,
-                    beds: top.beds,
-                    baths: top.baths,
-                    sqft: top.sqft,
-                    photo_url: top.image,
-                }).then(s => setSaved(prev => [...prev, s])).catch(() => { });
-            }
+                    zpid: top.zpid?.toString() || "", // Ensure string if backend expects it
+                    street_address: top.street_address || "Unknown",
+                    city: top.city || "",
+                    state: top.state || "",
+                    zip_code: top.zip_code || "",
+                    latitude: top.latitude || 0,
+                    longitude: top.longitude || 0,
+                    price: top.price || 0,
+                    price_per_sqft: top.price_per_sqft || 0,
+                    property_type: top.property_type || "",
+                    beds: top.beds || 0,
+                    baths: top.baths || 0,
+                    sqft: top.sqft || 0,
+                    photo_url: top.image || "", // Check if your API expects 'image' or 'photo_url'
+                };
 
+                const savedProp = await saveProperty(payload);
+                setSaved(prev => [...prev, savedProp]);
+            } catch (error) {
+                console.error("Failed to save property:", error);
+                // Optional: Rollback liked state or show a toast notification
+            }
         }
-        setDeck(d => d.slice(0, -1));
     };
 
     // Chat Logic
