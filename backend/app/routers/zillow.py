@@ -16,7 +16,7 @@ def search_zillow_properties(
     listing_status: str = Query("For_Sale"),
     page: int = Query(1),
 ):
-    url = "https://private-zillow.p.rapidapi.com/search"
+    url = "https://private-zillow.p.rapidapi.com/search/byaddress"
 
     headers = {
         "X-RapidAPI-Key": RAPIDAPI_KEY,
