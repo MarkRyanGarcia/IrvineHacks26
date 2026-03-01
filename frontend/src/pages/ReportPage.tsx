@@ -143,7 +143,7 @@ function ReportChat({ context }: { context: Record<string, unknown> }) {
 }
 
 /* ── MetricCard ── */
-function MetricCard({ icon, label, value, color }: { icon: string; label: string; value: string; color?: string }) {
+function MetricCard({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div style={{
       background: "rgba(255,255,255,0.48)", backdropFilter: "blur(14px)",
@@ -151,10 +151,7 @@ function MetricCard({ icon, label, value, color }: { icon: string; label: string
       boxShadow: "0 2px 12px rgba(28,58,53,0.05)",
       display: "flex", flexDirection: "column", gap: 6,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 16 }}>{icon}</span>
-        <span style={{ fontSize: 11, color: "rgba(42,74,66,0.5)", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
-      </div>
+      <span style={{ fontSize: 11, color: "rgba(42,74,66,0.5)", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
       <span style={{ fontSize: 22, fontWeight: 700, color: color ?? "#2a4a42", fontFamily: "'Playfair Display',serif" }}>{value}</span>
     </div>
   );
@@ -249,10 +246,10 @@ export default function ReportPage() {
 
         {/* Metrics grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
-          <MetricCard icon="📉" label="Downside Risk" value={pct(result.prob_downside)} color="#c47a6a" />
-          <MetricCard icon="🛡" label="Fragility" value={result.fragility_index} color={FRAG_COLOR[result.fragility_index] ?? "#2a4a42"} />
-          <MetricCard icon="📈" label="Upside (P90)" value={money(result.p90)} color="#6db8a0" />
-          <MetricCard icon="📊" label="Downside (P10)" value={money(result.p10)} color="#c4a882" />
+          <MetricCard label="Downside Risk" value={pct(result.prob_downside)} color="#c47a6a" />
+          <MetricCard label="Fragility" value={result.fragility_index} color={FRAG_COLOR[result.fragility_index] ?? "#2a4a42"} />
+          <MetricCard label="Upside (P90)" value={money(result.p90)} color="#6db8a0" />
+          <MetricCard label="Downside (P10)" value={money(result.p10)} color="#c4a882" />
         </div>
 
         {/* Projection bar */}
@@ -299,23 +296,6 @@ export default function ReportPage() {
               )}
             </p>
           )}
-        </div>
-
-        {/* AI Insight */}
-        <div style={{ ...card, marginBottom: 20 }}>
-          <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 500, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 18 }}>✨</span> AI Insight
-          </h3>
-          {explain.isPending ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(42,74,66,0.5)" }}>
-              <span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid rgba(42,74,66,0.15)", borderTopColor: "#6db8a0", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
-              Generating explanation...
-            </div>
-          ) : explain.isError ? (
-            <p style={{ fontSize: 13, color: "#c47a6a" }}>Could not generate explanation. Check your OpenAI API key.</p>
-          ) : explain.data ? (
-            <p style={{ fontSize: 13.5, color: "rgba(42,74,66,0.7)", lineHeight: 1.7, whiteSpace: "pre-line" }}>{explain.data.explanation}</p>
-          ) : null}
         </div>
 
         {/* Chat */}
