@@ -25,9 +25,9 @@ def search_zillow_properties(
     }
 
     params = {
-        "location": location,
-        "listingStatus": listing_status,
-        "page": page,
+        "location": location or "Irvine, CA",
+        "listingStatus": listing_status or "For_Sale",
+        "page": page or 1,
     }
 
     response = requests.get(url, headers=headers, params=params)
