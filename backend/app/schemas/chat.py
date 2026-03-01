@@ -11,6 +11,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessage]
     analysis_context: dict | None = None
+    user_id: str | None = None
 
 
 class ChatResponse(BaseModel):

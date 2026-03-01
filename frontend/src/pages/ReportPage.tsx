@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState, useCallback } from "react";
 import ConfidenceGauge from "../components/ConfidenceGauge";
@@ -52,7 +53,7 @@ function useWaveCanvas() {
 }
 
 /* ── Inline Chat (report-scoped) ── */
-function ReportChat({ context }: { context: Record<string, unknown> }) {
+function ReportChat({ context, userId }: { context: Record<string, unknown>; userId?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: "Have questions about your report? Ask me anything." },
   ]);
@@ -71,14 +72,14 @@ function ReportChat({ context }: { context: Record<string, unknown> }) {
     setInput("");
     setLoading(true);
     try {
-      const resp = await sendChat({ messages: updated.slice(-10), analysis_context: context });
+      const resp = await sendChat({ messages: updated.slice(-10), analysis_context: context, user_id: userId });
       setMessages(prev => [...prev, { role: "assistant", content: resp.reply }]);
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I had trouble responding. Try again." }]);
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, context]);
+  }, [input, loading, messages, context, userId]);
 
   return (
     <div style={{
@@ -163,6 +164,7 @@ export default function ReportPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const canvasRef = useWaveCanvas();
+  const { user } = useUser();
 
   const state = location.state as {
     result: AnalyzeResponse;
@@ -302,7 +304,7 @@ export default function ReportPage() {
 
         {/* Chat */}
         <div style={{ marginBottom: 20 }}>
-          <ReportChat context={{ ...result, offer_price: offerPrice } as unknown as Record<string, unknown>} />
+          <ReportChat context={{ ...result, offer_price: offerPrice } as unknown as Record<string, unknown>} userId={user?.id} />
         </div>
 
         {/* Actions */}

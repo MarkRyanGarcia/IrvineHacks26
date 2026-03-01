@@ -115,6 +115,7 @@ export interface ChatMessage {
 export interface ChatRequest {
   messages: ChatMessage[];
   analysis_context?: Record<string, unknown>;
+  user_id?: string;
 }
 
 export interface ChatResponse {

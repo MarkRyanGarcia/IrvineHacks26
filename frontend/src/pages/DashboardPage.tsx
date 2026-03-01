@@ -65,7 +65,7 @@ export function useWaveCanvas(paused: boolean) {
 /* ── Inline Chat Widget ── */
 type ChatMode = "idle" | "inline" | "fullscreen";
 
-function InlineChat() {
+function InlineChat({ userId }: { userId?: string }) {
   const [mode, setMode] = useState<ChatMode>("idle");
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: "Hi! Ask me anything about a home, the buying process, or your finances." },
@@ -87,14 +87,14 @@ function InlineChat() {
     setLoading(true);
     if (mode === "idle") setMode("inline");
     try {
-      const resp = await sendChat({ messages: updated.slice(-10) });
+      const resp = await sendChat({ messages: updated.slice(-10), user_id: userId || undefined });
       setMessages(prev => [...prev, { role: "assistant", content: resp.reply }]);
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I had trouble responding. Try again." }]);
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, mode]);
+  }, [input, loading, messages, mode, userId]);
 
   const hasMessages = messages.length > 1;
 
@@ -547,7 +547,7 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-              <InlineChat />
+              <InlineChat userId={userId} />
             </div>
           </div>
         )}

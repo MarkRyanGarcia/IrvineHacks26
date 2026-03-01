@@ -175,7 +175,7 @@ export default function ChattingPage() {
             }
         }
         setDeck(d => d.slice(0, -1));
-    }; 
+    };
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
@@ -225,7 +225,7 @@ export default function ChattingPage() {
         setLoading(true);
 
         try {
-            const res = await sendChat({ messages: updated.slice(-10) });
+            const res = await sendChat({ messages: updated.slice(-10), user_id: userId || undefined });
             setMessages((prev) => [...prev, { role: "assistant", content: res.reply }]);
         } catch {
             setMessages((prev) => [
@@ -249,15 +249,20 @@ export default function ChattingPage() {
             <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=Jost:wght@300;400&display=swap');
 
-        html.${SCOPE_CLASS}, body.${SCOPE_CLASS} { background: #FDF6EE !important; margin: 0; padding: 0; }
+        html.${SCOPE_CLASS}, body.${SCOPE_CLASS} { background: #FF6200 !important; margin: 0; padding: 0; }
         
         .${SCOPE_CLASS} .page-root {
+          min-height: 100vh;
+          background: #FF6200 !important;
+          position: relative;
           font-family: 'Jost', sans-serif;
           color: white;
+          overflow-x: hidden;
         }
 
         @keyframes drift-a { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px, -20px) scale(1.05); } 100% { transform: translate(-10px, 15px) scale(0.98); } }
-        @keyframes sun-rise { 0% { clip-path: circle(48px at 50% 50%); } 60% { clip-path: circle(80vmax at 50% 50%); } 100% { clip-path: circle(150vmax at 50% 50%); } }
+        @keyframes drift-b { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(-25px, 15px) scale(1.03); } 100% { transform: translate(20px, -10px) scale(0.97); } }
+        @keyframes sun-rise { 0% { clip-path: circle(48px at 50% 50%); } 100% { clip-path: circle(150vmax at 50% 50%); } }
         @keyframes face-fade { 0%, 30% { opacity: 1; } 60%, 100% { opacity: 0; } }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
@@ -274,6 +279,7 @@ export default function ChattingPage() {
 
         .${SCOPE_CLASS} .bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
         .${SCOPE_CLASS} .blob-a { animation: drift-a 18s ease-in-out infinite; }
+        .${SCOPE_CLASS} .blob-b { animation: drift-b 22s ease-in-out infinite; }
 
         .${SCOPE_CLASS} .chat-container {
           position: relative; z-index: 10;
@@ -299,10 +305,6 @@ export default function ChattingPage() {
 
         .${SCOPE_CLASS} .assistant { opacity: 0.8; font-style: italic; color: rgba(255,255,255,0.85); }
 
-        @keyframes reveal-after-sun {
-          to { opacity: 1; pointer-events: auto; }
-        }
-
         .${SCOPE_CLASS} .input-fixed-wrapper {
           position: fixed;
           bottom: 0; left: 0; width: 100%;
@@ -311,9 +313,6 @@ export default function ChattingPage() {
           z-index: 20;
           display: flex;
           justify-content: center;
-          opacity: 0;
-          pointer-events: none;
-          animation: reveal-after-sun 0.35s ease 2.1s forwards;
         }
 
         .${SCOPE_CLASS} .input-box {
@@ -337,18 +336,18 @@ export default function ChattingPage() {
         }
       `}</style>
 
-            <div className="page-root" style={{ position: "fixed", inset: 0, background: "#FDF6EE", overflowY: "auto", zIndex: 9999 }}>
+            <div className={`page-root ${SCOPE_CLASS}`}>
                 <div className="sun-overlay" />
-                <svg className="sun-face" viewBox="0 0 96 96" fill="none">
-                    <path d="M33 40 Q36 36 39 40" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" />
-                    <path d="M57 40 Q60 36 63 40" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" />
-                    <path d="M30 56 Q48 70 66 56" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" />
+                <svg className="sun-face" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M33 40 Q36 36 39 40" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none" />
+                    <path d="M57 40 Q60 36 63 40" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none" />
+                    <path d="M30 56 Q48 70 66 56" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none" />
                 </svg>
 
                 <svg className="bg-canvas" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
-                    <defs><filter id="blur"><feGaussianBlur stdDeviation="60" /></filter></defs>
-                    <g className="blob-a"><ellipse cx="170" cy="210" rx="370" ry="290" fill="#F9C89A" opacity="0.4" filter="url(#blur)" /></g>
-                    <g className="blob-b"><ellipse cx="1300" cy="100" rx="300" ry="300" fill="#F4A26A" opacity="0.3" filter="url(#blur)" /></g>
+                    <defs><filter id="blur-chatting"><feGaussianBlur stdDeviation="60" /></filter></defs>
+                    <g className="blob-a"><ellipse cx="170" cy="210" rx="370" ry="290" fill="#F9C89A" opacity="0.4" filter="url(#blur-chatting)" /></g>
+                    <g className="blob-b"><ellipse cx="1300" cy="100" rx="300" ry="300" fill="#F4A26A" opacity="0.3" filter="url(#blur-chatting)" /></g>
                 </svg>
 
                 <Navbar />

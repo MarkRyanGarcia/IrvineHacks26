@@ -6,9 +6,10 @@ import type { ChatMessage, AnalyzeResponse } from "../types";
 
 interface Props {
   analysisContext?: AnalyzeResponse & { offer_price?: number };
+  userId?: string;
 }
 
-export default function ChatWidget({ analysisContext }: Props) {
+export default function ChatWidget({ analysisContext, userId }: Props) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -27,6 +28,7 @@ export default function ChatWidget({ analysisContext }: Props) {
         analysis_context: analysisContext
           ? (analysisContext as unknown as Record<string, unknown>)
           : undefined,
+        user_id: userId,
       }),
     onSuccess: (data) => {
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);

@@ -46,11 +46,30 @@ def build_context_prompt(analysis_context: dict | None) -> str:
     )
 
 
+def build_liked_properties_prompt(liked_properties: list[dict]) -> str:
+    if not liked_properties:
+        return ""
+    lines = ["\n\nThe buyer has recently saved/liked these properties (most recent first):"]
+    for i, p in enumerate(liked_properties, 1):
+        addr = p.get("address", "")
+        if not addr and p.get("street_address"):
+            addr = f"{p.get('street_address', '')}, {p.get('city', '')} {p.get('state', '')} {p.get('zip_code', '')}".strip(", ")
+        if p.get("price"):
+            addr = f"{addr} — ${p['price']:,.0f}" if addr else f"${p['price']:,.0f}"
+        lines.append(f"  {i}. {addr or 'Property'}")
+    return "\n".join(lines) + "\n"
+
+
 def chat(
     messages: list[dict[str, str]],
     analysis_context: dict | None = None,
+    liked_properties: list[dict] | None = None,
 ) -> str:
-    system = SYSTEM_PROMPT + build_context_prompt(analysis_context)
+    system = (
+        SYSTEM_PROMPT
+        + build_context_prompt(analysis_context)
+        + build_liked_properties_prompt(liked_properties or [])
+    )
 
     formatted: list[dict[str, str]] = [{"role": "system", "content": system}]
     for msg in messages:
